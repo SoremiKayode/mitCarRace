@@ -1,6 +1,6 @@
 ---
-name: ChatInputBox
-description: ChatGPT-style prompt input box with send and audio buttons.
+name: EasyRacerEngine
+description: Beginner-friendly MIT App Inventor 2D racing game engine extension.
 
 version:
   number: auto
