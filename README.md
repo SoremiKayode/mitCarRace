@@ -1,4 +1,17 @@
-## ChatInputBoxNew
+## EasyRacer Engine
 
-An App Inventor 2 extension created using Rush.
-"# chatInputMITExtension" 
+EasyRacer Engine is a professional MIT App Inventor extension (`.aix`) for building 2D racing games with beginner-friendly blocks.
+
+Students provide images, choose simple properties such as road type or grip, and call `StartRace()` to get a playable racing game. The extension handles scrolling roads, physics, collisions, coins, fuel, nitro, health, checkpoints, laps, HUD, weather, templates, saving, and AI-ready opponents internally.
+
+### Quick start
+
+1. Import the extension into MIT App Inventor.
+2. Add `EasyRacerEngine` to a screen or arrangement.
+3. Call `SetCarImage`, `SetRoadImage`, optionally set `RoadType`, `MaximumSpeed`, and `Grip`.
+4. Call `CreateCar()` and `StartRace()`.
+5. Use `Accelerate`, `Brake`, `TurnLeft`, and `TurnRight` from buttons or a clock.
+
+### Beginner block groups
+
+Game, Cars, Bikes, Roads, Traffic, Physics, Camera, Sound, Weather, HUD, Score, Fuel, Nitro, Save, PowerUps, Animation, AI, Collision, Events, and Utilities.
