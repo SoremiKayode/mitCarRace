@@ -1,0 +1,17 @@
+---
+name: ChatInputBox
+description: ChatGPT-style prompt input box with send and audio buttons.
+
+version:
+  number: auto
+  name: '1.0'
+
+authors:
+  - Soremi Kayode
+
+build:
+  release:
+    optimize: true
+
+assets:
+  icon: icon.png
