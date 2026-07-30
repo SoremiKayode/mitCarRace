@@ -15,3 +15,9 @@ Students provide images, choose simple properties such as road type or grip, and
 ### Beginner block groups
 
 Game, Cars, Bikes, Roads, Traffic, Physics, Camera, Sound, Weather, HUD, Score, Fuel, Nitro, Save, PowerUps, Animation, AI, Collision, Events, and Utilities.
+
+### Professional racing UI and blocks
+
+The extension now requests landscape mode by default, draws built-in left and right navigation buttons at the screen edges, and includes on-screen Start, Pause, Play, Scores, and close-sidebar controls. Start is hidden after the game starts, Pause stops the game loop, and Play resumes without resetting race state.
+
+New beginner blocks include configurable road builders, accelerometer steering, local score storage/retrieval, high-score retrieval, and open/close score sidebar controls. See [`docs/BlocksGuide.md`](docs/BlocksGuide.md) for a full block-by-block tutorial and recommended setup workflow.
