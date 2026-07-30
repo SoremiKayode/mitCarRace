@@ -29,10 +29,11 @@ The game surface draws professional touch controls automatically:
 
 - **Left navigation button** on the left end of the screen.
 - **Right navigation button** on the right end of the screen.
-- **START**, **PAUSE**, and **PLAY** buttons for race state.
-- **SCORES** button to open or close the score sidebar.
+- Icon-only **START**, **STOP**, **PAUSE**, and **PLAY** buttons for race state.
+- Icon-only **SCORES** button to open the score sidebar and an icon-only close button inside the sidebar.
+- Icon-only accelerator and brake controls near the right side of the road.
 
-Players can also tap the upper-right driving area to accelerate and the lower-right driving area to brake.
+Each control uses the same hit target as its visible gradient button, so players do not need to find hidden tap zones.
 
 ## 4. Road blocks
 
@@ -101,7 +102,7 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 5. Call `CreateCar()`.
 6. Let the player press the on-screen **START** button or call `StartRace()` from your own button.
 7. Add an `AccelerometerSensor` if tilt control is wanted, then call `EnableAccelerometerNavigation(true, 1.2, 0.8)` and `NavigateWithAccelerometer` from the sensor event.
-8. Call `OpenScoreSidebar()` from a Scores button, or use the built-in **SCORES** overlay button.
+8. Call `OpenScoreSidebar()` from a Scores button, or use the built-in icon-only **SCORES** overlay button. Use the built-in **STOP** button when the player should abandon a run without storing a finish score.
 
 ## 8. Events to use
 
