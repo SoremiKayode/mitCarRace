@@ -27,12 +27,12 @@ Stops the race, stores the final score in the local score database, and triggers
 
 The game surface draws professional touch controls automatically:
 
-- Circular **Left navigation button** on the left end of the screen. It changes the player car's x position while pressed.
-- Circular **Right navigation button** on the right end of the screen. It changes the player car's x position while pressed.
-- `SetLeftNavigationButtonImage(path)` and `SetRightNavigationButtonImage(path)` let you replace those built-in arrow labels with uploaded button images.
-- Icon-only **START**, **STOP**, **PAUSE**, and **PLAY** buttons for race state.
+- Circular **Left navigation button** on the left end of the screen. It changes only the player car's x position while pressed, so the car stays facing forward.
+- Circular **Right navigation button** on the right end of the screen. It changes only the player car's x position while pressed, so the car stays facing forward.
+- `SetLeftNavigationButtonImage(path)` / `SetLeftArrowButtonImage(path)` and `SetRightNavigationButtonImage(path)` / `SetRightArrowButtonImage(path)` let you replace those built-in arrow labels with uploaded button images.
+- Icon-only **START**, **STOP**, **PAUSE**, and **PLAY** buttons for race state. Pause and Play share the same fixed top-right position so the button does not jump when toggled.
 - Icon-only **SCORES** button to open the score sidebar and an icon-only close button inside the sidebar.
-- Icon-only accelerator and brake controls near the right side of the road.
+- Up/down accelerator and brake buttons are intentionally not drawn; use the `Accelerate()` and `Brake()` blocks from your own controls if needed.
 
 Each control uses the same hit target as its visible gradient button, so players do not need to find hidden tap zones.
 
@@ -108,7 +108,7 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 
 ## Image blocks: using uploaded App Inventor assets
 
-For `SetCarImage`, `SetOpponentImage` / `SetOpponentCarImage`, `SetCoinImage`, `SetBikeImage`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage`, and `SetRightNavigationButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
+For `SetCarImage`, `SetOpponentImage` / `SetOpponentCarImage`, `SetCoinImage`, `SetBikeImage`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage` / `SetLeftArrowButtonImage`, and `SetRightNavigationButtonImage` / `SetRightArrowButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
 
 Recommended order:
 

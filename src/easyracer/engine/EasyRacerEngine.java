@@ -49,11 +49,11 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private boolean bikeMode = false, raceRunning = false, gameStarted = false, autoScroll = true, infiniteMode = true;
     private boolean fuelEnabled = false, nitroEnabled = false, hudEnabled = true, miniMapEnabled = true;
     private boolean speedometerEnabled = true, trafficEnabled = false, landscapeDefault = true;
-    private boolean leftPressed = false, rightPressed = false, acceleratePressed = false, brakePressed = false;
+    private boolean leftPressed = false, rightPressed = false;
     private boolean accelerometerEnabled = false;
     private float accelerometerSensitivity = 1.2f, accelerometerDeadZone = 0.8f;
     private boolean scoreSidebarOpen = false;
-    private float carX = 300, carY = 650, carWidth = 90, carHeight = 150, angle = 0;
+    private float carX = 300, carY = 650, carWidth = 120, carHeight = 190, angle = 0;
     private float speed = 0, acceleration = 0.35f, brakeStrength = 0.65f, maxSpeed = 18f, turnSpeed = 4f;
     private float weight = 1f, grip = 0.85f, friction = 0.04f, roadGrip = 1f, speedMultiplier = 1f;
     private float roadWidth = 720, roadHeight = 1280, roadSpeed = 6f, roadOffset = 0;
@@ -98,14 +98,14 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Pauses the game and shows the on-screen Play button so the race can resume without resetting score, vehicle, or timer.") public void PauseRace() { raceRunning = false; view.invalidate(); }
     @SimpleFunction(description = "Resumes a paused race. Use this for a Play button block after PauseRace; it does not reset score or position.") public void PlayRace() { if (gameStarted && !raceRunning) { raceRunning = true; handler.post(loop); RaceResumed(); view.invalidate(); } }
     @SimpleFunction(description = "Finishes the race, stores the score in the built-in database, and dispatches RaceFinished.") public void FinishRace() { raceRunning = false; gameStarted = false; StoreScore(currentPlayerId, score); RaceFinished(score); view.invalidate(); }
-    @SimpleFunction(description = "Stops the current race from the on-screen Stop button without saving a finish score. Speed is cleared and the Start button becomes available again.") public void StopRace() { raceRunning = false; gameStarted = false; speed = 0; leftPressed = false; rightPressed = false; acceleratePressed = false; brakePressed = false; CarStopped(); view.invalidate(); }
+    @SimpleFunction(description = "Stops the current race from the on-screen Stop button without saving a finish score. Speed is cleared and the Start button becomes available again.") public void StopRace() { raceRunning = false; gameStarted = false; speed = 0; leftPressed = false; rightPressed = false; CarStopped(); view.invalidate(); }
 
 
     @SimpleFunction(description = "Sets the screen to landscape by default for a real racing-game feel. Call with false only if you want to return control to the app screen orientation.") public void SetLandscapeMode(boolean enabled) { landscapeDefault = enabled; setLandscapeMode(enabled); }
     @SimpleFunction(description = "Creates and balances a road preset. Inputs: type (City, Highway, Desert, Snow, Dirt, Track, Cyberpunk), lanes (visible lanes), surface (asphalt, dirt, sand, ice), marking (dashed, solid, double), sideStyle (city, forest, desert, snow), grip, friction, speed, width, and difficulty. The engine arranges these into road physics, visuals, lane lines, scenery, and scrolling speed automatically.") public void ConfigureRoadBlock(String type, int lanes, String surface, String marking, String sideStyle, float gripValue, float frictionValue, float speedValue, float widthValue, String difficulty) { roadType = type; roadLanes = Math.max(1, lanes); roadSurface = surface; roadMarking = marking; roadSideStyle = sideStyle; roadGrip = gripValue; friction = Math.max(0, frictionValue); roadSpeed = Math.max(0, speedValue); roadWidth = Math.max(280, widthValue); roadDifficulty = difficulty; applyRoadType(); view.invalidate(); }
     @SimpleFunction(description = "One-block road builder for common road types. Input: type. Supported values are City, Highway, Desert, Snow, Dirt, Track, Forest, Beach, Mountain, and Cyberpunk. The block chooses safe defaults for grip, friction, lanes, colors, roadside scenery, and speed.") public void CreateRoadTypeBlock(String type) { roadType = type; applyRoadPreset(type); view.invalidate(); }
     @SimpleFunction(description = "Enables accelerometer steering. Inputs: enabled, sensitivity, and deadZone. Connect an AccelerometerSensor.Changed event to NavigateWithAccelerometer(xAccel, yAccel, zAccel) after enabling this block.") public void EnableAccelerometerNavigation(boolean enabled, float sensitivity, float deadZone) { accelerometerEnabled = enabled; accelerometerSensitivity = Math.max(0.1f, sensitivity); accelerometerDeadZone = Math.max(0, deadZone); }
-    @SimpleFunction(description = "Navigates the car from AccelerometerSensor readings. Input xAccel steers left/right, yAccel accelerates or brakes, and zAccel is accepted for compatibility. Use inside AccelerometerSensor.AccelerationChanged.") public void NavigateWithAccelerometer(float xAccel, float yAccel, float zAccel) { if (!accelerometerEnabled) return; if (Math.abs(xAccel) > accelerometerDeadZone) { float oldTurn = turnSpeed; turnSpeed *= accelerometerSensitivity; turn(xAccel > 0 ? -1 : 1); turnSpeed = oldTurn; } if (yAccel < -accelerometerDeadZone) Accelerate(); else if (yAccel > accelerometerDeadZone) Brake(); }
+    @SimpleFunction(description = "Navigates the car from AccelerometerSensor readings. Input xAccel steers left/right, yAccel accelerates or brakes, and zAccel is accepted for compatibility. Use inside AccelerometerSensor.AccelerationChanged.") public void NavigateWithAccelerometer(float xAccel, float yAccel, float zAccel) { if (!accelerometerEnabled) return; if (Math.abs(xAccel) > accelerometerDeadZone) { float oldTurn = turnSpeed; turnSpeed *= accelerometerSensitivity; moveSideways(xAccel > 0 ? -1 : 1); turnSpeed = oldTurn; } if (yAccel < -accelerometerDeadZone) Accelerate(); else if (yAccel > accelerometerDeadZone) Brake(); }
     @SimpleFunction(description = "Stores a score in the built-in local database using SharedPreferences. Inputs: playerId and score. The block also updates the high score automatically.") public void StoreScore(String playerId, int value) { String id = cleanPlayer(playerId); int best = Math.max(value, saves.getInt("score_" + id, 0)); saves.edit().putInt("score_" + id, best).putInt("lastScore", value).putInt("highScore", Math.max(value, saves.getInt("highScore", 0))).putString("highScorePlayer", value >= saves.getInt("highScore", 0) ? id : saves.getString("highScorePlayer", id)).apply(); }
     @SimpleFunction(description = "Retrieves a stored score from the built-in local database. Input: playerId. Returns that player's best saved score.") public int RetrieveScore(String playerId) { return saves.getInt("score_" + cleanPlayer(playerId), 0); }
     @SimpleFunction(description = "Returns the highest score stored in the built-in local database.") public int RetrieveHighScore() { return saves.getInt("highScore", 0); }
@@ -114,8 +114,10 @@ public class EasyRacerEngine extends AndroidViewComponent {
 
     @SimpleFunction(description = "Accelerates the vehicle. Use with a button or clock for manual control.") public void Accelerate() { if (fuelEnabled && fuel <= 0) { FuelEmpty(); return; } speed = Math.min(maxSpeed * speedMultiplier, speed + acceleration / Math.max(0.2f, weight)); CarMoving(); }
     @SimpleFunction(description = "Brakes the vehicle and supports reverse at low speed.") public void Brake() { speed = Math.max(-maxSpeed * 0.35f, speed - brakeStrength); }
-    @SimpleFunction(description = "Turns left using grip-aware automatic skid physics.") public void TurnLeft() { turn(-1); }
-    @SimpleFunction(description = "Turns right using grip-aware automatic skid physics.") public void TurnRight() { turn(1); }
+    @SimpleFunction(description = "Moves the car left without rotating it, keeping the car facing forward.") public void TurnLeft() { MoveLeft(); }
+    @SimpleFunction(description = "Moves the car right without rotating it, keeping the car facing forward.") public void TurnRight() { MoveRight(); }
+    @SimpleFunction(description = "Moves the car left without rotating it, keeping the car facing forward.") public void MoveLeft() { moveSideways(-1); }
+    @SimpleFunction(description = "Moves the car right without rotating it, keeping the car facing forward.") public void MoveRight() { moveSideways(1); }
     @SimpleFunction(description = "Uses nitro boost if enabled and available.") public void UseNitro() { if (nitroEnabled && nitro > 0) { nitro = Math.max(0, nitro - 8); speed = Math.min(maxSpeed * 1.7f, speed + 5); NitroStarted(); if (nitro == 0) NitroEnded(); } }
 
     @SimpleFunction(description = "Sets player car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: icon.png") public void SetCarImage(String path) { carBitmap = load(path); }
@@ -130,14 +132,17 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Sets default coin image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: coin.png") public void SetCoinImage(String path) { coinBitmap = load(path); }
     @SimpleFunction(description = "Sets the left navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetLeftNavigationButtonImage(String path) { leftNavBitmap = load(path); }
     @SimpleFunction(description = "Sets the right navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetRightNavigationButtonImage(String path) { rightNavBitmap = load(path); }
-    @SimpleFunction(description = "Creates an AI opponent at x,y.") public void CreateOpponent(float x, float y) { GameObject o = new GameObject(x, y, 90, 150, "opponent"); opponents.add(o); }
+    @SimpleFunction(description = "Sets the left arrow button image. Alias for SetLeftNavigationButtonImage.") public void SetLeftArrowButtonImage(String path) { SetLeftNavigationButtonImage(path); }
+    @SimpleFunction(description = "Sets the right arrow button image. Alias for SetRightNavigationButtonImage.") public void SetRightArrowButtonImage(String path) { SetRightNavigationButtonImage(path); }
+    @SimpleFunction(description = "Creates an AI opponent at x,y.") public void CreateOpponent(float x, float y) { GameObject o = new GameObject(x, y, 120, 190, "opponent"); opponents.add(o); }
     @SimpleFunction(description = "Spawns a coin at x,y.") public void SpawnCoin(float x, float y) { coins.add(new GameObject(x, y, 44, 44, "coin")); }
     @SimpleFunction(description = "Creates a checkpoint rectangle.") public void CreateCheckpoint(float x, float y, float width, float height) { checkpoints.add(new GameObject(x, y, width, height, "checkpoint")); }
     @SimpleFunction(description = "Adds an obstacle such as tree, rock, cone, oil, water, fire, or pothole.") public void CreateObstacle(String type, float x, float y, float width, float height) { obstacles.add(new GameObject(x, y, width, height, type)); }
     @SimpleFunction(description = "Spawns a built-in power up: Shield, Nitro, Double Coin, Repair, Slow Motion, Magnet, or Invincible.") public void SpawnPowerUp(String type, float x, float y) { obstacles.add(new GameObject(x, y, 58, 58, "PowerUp:" + type)); }
     @SimpleFunction(description = "Stores a sound asset path for Engine, Brake, Crash, Horn, Coin, Nitro, Victory, or Game Over.") public void SetSound(String name, String path) { String n = name == null ? "" : name.toLowerCase(); if (n.contains("engine")) engineSound = path; else if (n.contains("brake")) brakeSound = path; else if (n.contains("crash")) crashSound = path; else if (n.contains("horn")) hornSound = path; else if (n.contains("coin")) coinSound = path; else if (n.contains("nitro")) nitroSound = path; else if (n.contains("victory")) victorySound = path; else if (n.contains("over")) gameOverSound = path; }
     @SimpleFunction(description = "Configures simple car customization: tint, wheel size, and optional accessory images.") public void CustomizeCar(String tint, float wheelSizeValue, String wheelPath, String spoilerPath, String exhaustPath, String headlightPath) { carTint = tint; wheelSize = wheelSizeValue; wheelImage = wheelPath; spoilerImage = spoilerPath; exhaustImage = exhaustPath; headlightImage = headlightPath; }
-    @SimpleFunction(description = "Sets body scale for simple visual customization.") public void SetBodyScale(float scale) { bodyScale = Math.max(0.2f, scale); carWidth *= bodyScale; carHeight *= bodyScale; }
+    @SimpleFunction(description = "Sets a fixed player vehicle size in pixels.") public void SetVehicleSize(float width, float height) { carWidth = Math.max(40, width); carHeight = Math.max(60, height); view.invalidate(); }
+    @SimpleFunction(description = "Sets body scale for simple visual customization from the default larger fixed vehicle size.") public void SetBodyScale(float scale) { bodyScale = Math.max(0.2f, scale); SetVehicleSize(120f * bodyScale, 190f * bodyScale); }
     @SimpleFunction(description = "Enables or disables automatic fuel usage.") public void EnableFuel(boolean enabled) { fuelEnabled = enabled; }
     @SimpleFunction(description = "Adds fuel up to 100.") public void AddFuel(int amount) { fuel = clamp(fuel + amount, 0, 100); }
     @SimpleFunction(description = "Enables or disables nitro.") public void EnableNitro(boolean enabled) { nitroEnabled = enabled; }
@@ -209,7 +214,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleEvent public void TimeFinished() { EventDispatcher.dispatchEvent(this, "TimeFinished"); }
 
     private void tick() {
-        if (leftPressed) TurnLeft(); if (rightPressed) TurnRight(); if (acceleratePressed) Accelerate(); if (brakePressed) Brake();
+        if (leftPressed) MoveLeft(); if (rightPressed) MoveRight();
         if (autoScroll) roadOffset += Math.max(roadSpeed, Math.abs(speed));
         speed *= Math.max(0, 1f - friction - (1f - grip * roadGrip) * 0.025f);
         if (Math.abs(speed) < 0.05f) { if (speed != 0) CarStopped(); speed = 0; }
@@ -224,7 +229,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
         view.invalidate();
     }
     private void updateObjects(ArrayList<GameObject> list, float dy) { for (GameObject o : list) if (autoScroll) o.y += dy; }
-    private void turn(int dir) { float effectiveGrip = Math.max(0.1f, grip * roadGrip); angle += dir * turnSpeed * effectiveGrip; carX += dir * steeringMoveDistance(effectiveGrip); if (effectiveGrip < 0.35f) carX += dir * Math.abs(speed) * 0.6f; }
+    private void moveSideways(int dir) { float effectiveGrip = Math.max(0.1f, grip * roadGrip); angle = 0; carX += dir * steeringMoveDistance(effectiveGrip); if (effectiveGrip < 0.35f) carX += dir * Math.abs(speed) * 0.6f; }
     private float steeringMoveDistance(float effectiveGrip) { return Math.max(7f, Math.abs(speed) * 1.35f) * effectiveGrip; }
     private void checkCollisions() {
         RectF car = rect(carX, carY, carWidth, carHeight);
@@ -252,19 +257,17 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private String cleanPlayer(String playerId) { return playerId == null || playerId.trim().length() == 0 ? "Player" : playerId.trim(); }
     private void applyPowerUp(String type) { String t = type == null ? "" : type.toLowerCase(); if (t.contains("nitro")) nitro = 100; if (t.contains("repair")) Repair(30); if (t.contains("double")) score += 200; if (t.contains("shield") || t.contains("invincible")) health = 100; if (t.contains("slow")) roadSpeed *= 0.7f; }
     private void applyWeather() { String w = weather == null ? "" : weather.toLowerCase(); if (w.contains("rain")) roadGrip *= 0.75f; if (w.contains("snow")) roadGrip *= 0.5f; if (w.contains("storm")) { roadGrip *= 0.65f; roadSpeed *= 0.9f; } }
-    private Bitmap load(String path) { try { if (path == null || path.length() == 0) return null; if (imageCache.containsKey(path)) return imageCache.get(path); InputStream in = MediaUtil.openMedia(container.$form(), path); Bitmap b = BitmapFactory.decodeStream(in); imageCache.put(path, b); return b; } catch (Exception e) { return null; } }
+    private Bitmap load(String path) { InputStream in = null; try { if (path == null || path.trim().length() == 0) return null; String key = path.trim(); if (imageCache.containsKey(key)) return imageCache.get(key); in = MediaUtil.openMedia(container.$form(), key); Bitmap b = BitmapFactory.decodeStream(in); if (b != null) imageCache.put(key, b); return b; } catch (Exception e) { return null; } finally { try { if (in != null) in.close(); } catch (Exception ignored) { } } }
 
     private class RacerView extends View {
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF leftButton = new RectF(), rightButton = new RectF(), accelerateButton = new RectF(), brakeButton = new RectF();
+        private final RectF leftButton = new RectF(), rightButton = new RectF();
         private final RectF startButton = new RectF(), pauseButton = new RectF(), playButton = new RectF(), stopButton = new RectF(), scoreButton = new RectF(), closeSidebarButton = new RectF();
         private final ArrayList<TouchWave> waves = new ArrayList<TouchWave>();
         RacerView(Context c) { super(c); setBackgroundColor(Color.rgb(10, 14, 22)); setFocusable(true); }
         @Override protected void onDraw(Canvas c) { super.onDraw(c); drawSky(c); drawRoad(c); drawList(c, coins, coinBitmap, Color.YELLOW); drawList(c, obstacles, null, Color.RED); drawList(c, opponents, opponentBitmap, Color.BLUE); drawVehicle(c); if (hudEnabled) drawHud(c); drawControls(c); if (scoreSidebarOpen) drawScoreSidebar(c); }
-        @Override public boolean onTouchEvent(MotionEvent e) { float x = e.getX(), y = e.getY(); int action = e.getActionMasked(); boolean down = action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE; if (action == MotionEvent.ACTION_DOWN) { addWave(x, y); if (startButton.contains(x, y) && !gameStarted) StartRace(); else if (pauseButton.contains(x, y) && raceRunning) PauseRace(); else if (playButton.contains(x, y) && gameStarted && !raceRunning) PlayRace(); else if (stopButton.contains(x, y) && gameStarted) StopRace(); else if (scoreButton.contains(x, y)) { scoreSidebarOpen = !scoreSidebarOpen; invalidate(); } else if (scoreSidebarOpen && closeSidebarButton.contains(x, y)) CloseScoreSidebar(); } if (!down) { leftPressed = rightPressed = acceleratePressed = brakePressed = false; invalidate(); return true; } leftPressed = leftButton.contains(x, y);
+        @Override public boolean onTouchEvent(MotionEvent e) { float x = e.getX(), y = e.getY(); int action = e.getActionMasked(); boolean down = action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE; if (action == MotionEvent.ACTION_DOWN) { addWave(x, y); if (startButton.contains(x, y) && !gameStarted) StartRace(); else if (pauseButton.contains(x, y) && raceRunning) PauseRace(); else if (playButton.contains(x, y) && gameStarted && !raceRunning) PlayRace(); else if (stopButton.contains(x, y) && gameStarted) StopRace(); else if (scoreButton.contains(x, y)) { scoreSidebarOpen = !scoreSidebarOpen; invalidate(); } else if (scoreSidebarOpen && closeSidebarButton.contains(x, y)) CloseScoreSidebar(); } if (!down) { leftPressed = rightPressed = false; invalidate(); return true; } leftPressed = leftButton.contains(x, y);
             rightPressed = rightButton.contains(x, y);
-            acceleratePressed = accelerateButton.contains(x, y);
-            brakePressed = brakeButton.contains(x, y);
             invalidate(); return true; }
         private void drawSky(Canvas c) { p.setShader(new LinearGradient(0, 0, 0, getHeight(), Color.rgb(16, 27, 45), Color.rgb(5, 8, 14), Shader.TileMode.CLAMP)); c.drawRect(0, 0, getWidth(), getHeight(), p); p.setShader(null); }
         private void drawRoad(Canvas c) {
@@ -292,22 +295,19 @@ public class EasyRacerEngine extends AndroidViewComponent {
         private int roadColor() { String t = roadSurface == null ? "" : roadSurface.toLowerCase(); if (t.contains("sand")) return Color.rgb(166, 128, 72); if (t.contains("ice")) return Color.rgb(134, 174, 190); if (t.contains("dirt")) return Color.rgb(92, 66, 45); return Color.rgb(54, 57, 62); }
         private int sideColor() { String t = roadSideStyle == null ? "" : roadSideStyle.toLowerCase(); if (t.contains("desert") || t.contains("beach")) return Color.rgb(190, 152, 88); if (t.contains("snow")) return Color.rgb(210, 225, 230); if (t.contains("forest") || t.contains("mountain")) return Color.rgb(27, 75, 42); if (t.contains("cyber")) return Color.rgb(34, 20, 55); return Color.rgb(31, 78, 56); }
         private void drawVehicle(Canvas c) { Bitmap b = bikeMode ? bikeBitmap : carBitmap; RectF dst = rect(carX, carY, carWidth, carHeight); c.save(); c.rotate(angle, carX, carY); if (b != null) c.drawBitmap(b, null, dst, p); else { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(dst.left+8,dst.bottom-18,dst.right-8,dst.bottom+10),p); p.setColor(bikeMode ? Color.CYAN : Color.rgb(22, 190, 96)); c.drawRoundRect(dst, 18, 18, p); p.setColor(Color.rgb(160, 230, 255)); c.drawRoundRect(new RectF(dst.left+18,dst.top+24,dst.right-18,dst.top+62),10,10,p); p.setColor(Color.BLACK); c.drawRect(dst.left-8,dst.top+28,dst.left+8,dst.top+58,p); c.drawRect(dst.right-8,dst.top+28,dst.right+8,dst.top+58,p); c.drawRect(dst.left-8,dst.bottom-58,dst.left+8,dst.bottom-28,p); c.drawRect(dst.right-8,dst.bottom-58,dst.right+8,dst.bottom-28,p); } c.restore(); }
-        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { if (b != null) c.drawBitmap(b, null, o.rect(), p); else { p.setColor(color); c.drawRoundRect(o.rect(), 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } } }
+        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); if (b != null) { c.drawBitmap(b, null, r, p); } else if ("opponent".equals(o.type)) { drawOpponentFallback(c, r); } else { p.setColor(color); c.drawRoundRect(r, 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } } }
+        private void drawOpponentFallback(Canvas c, RectF r) { p.setColor(Color.rgb(210, 56, 64)); c.drawRoundRect(r, 18, 18, p); p.setColor(Color.rgb(255, 210, 120)); c.drawRoundRect(new RectF(r.left+18, r.top+24, r.right-18, r.top+62), 10, 10, p); p.setColor(Color.BLACK); c.drawRect(r.left-8, r.top+28, r.left+8, r.top+58, p); c.drawRect(r.right-8, r.top+28, r.right+8, r.top+58, p); c.drawRect(r.left-8, r.bottom-58, r.left+8, r.bottom-28, p); c.drawRect(r.right-8, r.bottom-58, r.right+8, r.bottom-28, p); }
         private void drawHud(Canvas c) { p.setTextSize(20); p.setColor(Color.argb(128,0,0,0)); c.drawRoundRect(new RectF(16, 16, 250, 150), 18, 18, p); p.setColor(Color.WHITE); c.drawText("Speed " + (int)Math.abs(speed * 10), 32, 50, p); c.drawText("Score " + score, 32, 84, p); c.drawText("Lap " + lap + "/" + maxLap, 32, 118, p); c.drawText("Health " + health, 32, 140, p); if (fuelEnabled) c.drawText("Fuel " + fuel, 32, 166, p); if (nitroEnabled) c.drawText("Nitro " + nitro, 32, 192, p); }
         private void drawControls(Canvas c) { float h = getHeight(), w = getWidth(); leftButton.set(22, h-132, 142, h-24);
             rightButton.set(w-142, h-132, w-22, h-24);
-            accelerateButton.set(w-286, h-204, w-174, h-96);
-            brakeButton.set(w-286, h-86, w-174, h-24);
             startButton.set(w/2-76, h-98, w/2-8, h-30);
             stopButton.set(w/2+8, h-98, w/2+76, h-30);
             pauseButton.set(w-96, 22, w-34, 84);
-            playButton.set(w-96, 96, w-34, 158);
+            playButton.set(pauseButton);
             scoreButton.set(w-182, 22, w-112, 84);
             drawWaves(c);
             drawButton(c, leftButton, "‹", leftPressed, leftNavBitmap);
             drawButton(c, rightButton, "›", rightPressed, rightNavBitmap);
-            drawButton(c, accelerateButton, "▲", acceleratePressed);
-            drawButton(c, brakeButton, "▼", brakePressed);
             if (!gameStarted) drawButton(c, startButton, "▶", false);
             if (gameStarted) drawButton(c, stopButton, "■", false);
             if (raceRunning) drawButton(c, pauseButton, "Ⅱ", false);
