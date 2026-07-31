@@ -8,7 +8,7 @@ Students provide images, choose simple properties such as road type or grip, and
 
 1. Import the extension into MIT App Inventor.
 2. Add `EasyRacerEngine` to a screen or arrangement.
-3. Call `SetCarImage`, `SetRoadImage`, optionally set `RoadType`, `MaximumSpeed`, and `Grip`.
+3. Upload images in the MIT App Inventor **Media** panel, then call `SetCarImage`, `SetRoadImage`, `SetCoinImage`, or `SetOpponentImage` with the exact filename text, such as `icon.png`; optionally set `RoadType`, `MaximumSpeed`, and `Grip`.
 4. Call `CreateCar()` and `StartRace()`.
 5. Use `Accelerate`, `Brake`, `TurnLeft`, and `TurnRight` from buttons or a clock.
 

@@ -104,6 +104,19 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 7. Add an `AccelerometerSensor` if tilt control is wanted, then call `EnableAccelerometerNavigation(true, 1.2, 0.8)` and `NavigateWithAccelerometer` from the sensor event.
 8. Call `OpenScoreSidebar()` from a Scores button, or use the built-in icon-only **SCORES** overlay button. Use the built-in **STOP** button when the player should abandon a run without storing a finish score.
 
+
+## Image blocks: using uploaded App Inventor assets
+
+For `SetCarImage`, `SetOpponentImage`, `SetCoinImage`, `SetBikeImage`, and `SetRoadImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
+
+Recommended order:
+
+1. Upload the PNG/JPG/WEBP file to **Media**.
+2. In blocks, use a text block containing only the filename, such as `icon.png`.
+3. Call the image setter before creating or spawning that object. For example, call `SetCarImage("car.png")` before `CreateCar()`, call `SetOpponentImage("opponent.png")` before `CreateOpponent(...)`, and call `SetCoinImage("coin.png")` before `SpawnCoin(...)`.
+
+Do not use the Image component itself as the value. Use the image asset's filename text. Filenames are case-sensitive on Android, so `Icon.png` and `icon.png` are different names.
+
 ## 8. Events to use
 
 - `RaceStarted`: show game UI or play music.
