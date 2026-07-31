@@ -44,7 +44,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private final ArrayList<GameObject> checkpoints = new ArrayList<GameObject>();
     private final SharedPreferences saves;
 
-    private Bitmap carBitmap, bikeBitmap, roadBitmap, coinBitmap, opponentBitmap;
+    private Bitmap carBitmap, bikeBitmap, roadBitmap, leftRoadBitmap, rightRoadBitmap, coinBitmap, opponentBitmap, leftNavBitmap, rightNavBitmap;
     private String carName = "Player";
     private boolean bikeMode = false, raceRunning = false, gameStarted = false, autoScroll = true, infiniteMode = true;
     private boolean fuelEnabled = false, nitroEnabled = false, hudEnabled = true, miniMapEnabled = true;
@@ -120,11 +120,16 @@ public class EasyRacerEngine extends AndroidViewComponent {
 
     @SimpleFunction(description = "Sets player car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: icon.png") public void SetCarImage(String path) { carBitmap = load(path); }
     @SimpleFunction(description = "Sets player bike image from asset path or file path.") public void SetBikeImage(String path) { bikeBitmap = load(path); }
-    @SimpleFunction(description = "Sets scrolling road image from asset path or file path.") public void SetRoadImage(String path) { roadBitmap = load(path); }
+    @SimpleFunction(description = "Sets the centered main scrolling road image from asset path or file path. When set, the built-in generated road is hidden and the image fills the middle 70% road area.") public void SetRoadImage(String path) { roadBitmap = load(path); }
+    @SimpleFunction(description = "Sets the scrolling left road-side image from asset path or file path. It fills the left 15% side area by default.") public void SetLeftRoadImage(String path) { leftRoadBitmap = load(path); }
+    @SimpleFunction(description = "Sets the scrolling right road-side image from asset path or file path. It fills the right 15% side area by default.") public void SetRightRoadImage(String path) { rightRoadBitmap = load(path); }
     @SimpleFunction(description = "Sets road width in pixels.") public void SetRoadWidth(float width) { roadWidth = width; }
     @SimpleFunction(description = "Sets road height in pixels.") public void SetRoadHeight(float height) { roadHeight = height; }
     @SimpleFunction(description = "Sets default opponent image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: opponent.png") public void SetOpponentImage(String path) { opponentBitmap = load(path); }
+    @SimpleFunction(description = "Sets default opponent car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Alias for SetOpponentImage.") public void SetOpponentCarImage(String path) { SetOpponentImage(path); }
     @SimpleFunction(description = "Sets default coin image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: coin.png") public void SetCoinImage(String path) { coinBitmap = load(path); }
+    @SimpleFunction(description = "Sets the left navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetLeftNavigationButtonImage(String path) { leftNavBitmap = load(path); }
+    @SimpleFunction(description = "Sets the right navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetRightNavigationButtonImage(String path) { rightNavBitmap = load(path); }
     @SimpleFunction(description = "Creates an AI opponent at x,y.") public void CreateOpponent(float x, float y) { GameObject o = new GameObject(x, y, 90, 150, "opponent"); opponents.add(o); }
     @SimpleFunction(description = "Spawns a coin at x,y.") public void SpawnCoin(float x, float y) { coins.add(new GameObject(x, y, 44, 44, "coin")); }
     @SimpleFunction(description = "Creates a checkpoint rectangle.") public void CreateCheckpoint(float x, float y, float width, float height) { checkpoints.add(new GameObject(x, y, width, height, "checkpoint")); }
@@ -205,13 +210,14 @@ public class EasyRacerEngine extends AndroidViewComponent {
 
     private void tick() {
         if (leftPressed) TurnLeft(); if (rightPressed) TurnRight(); if (acceleratePressed) Accelerate(); if (brakePressed) Brake();
-        if (autoScroll) roadOffset += roadSpeed;
+        if (autoScroll) roadOffset += Math.max(roadSpeed, Math.abs(speed));
         speed *= Math.max(0, 1f - friction - (1f - grip * roadGrip) * 0.025f);
         if (Math.abs(speed) < 0.05f) { if (speed != 0) CarStopped(); speed = 0; }
         carY -= speed;
         if (infiniteMode) { carY = Math.max(80, Math.min(view.getHeight() - 80, carY)); }
         if (fuelEnabled && Math.abs(speed) > 0.2f) { fuel = clamp(fuel - 1, 0, 100); if (fuel == 0) FuelEmpty(); }
-        score += Math.max(0, (int)Math.abs(speed));
+        score = Math.max(score, RaceTime()) + Math.max(0, (int)Math.abs(speed));
+        pushBackToMainRoad();
         updateObjects(coins, roadSpeed); updateObjects(opponents, roadSpeed * 0.8f); updateObjects(obstacles, roadSpeed); updateObjects(checkpoints, roadSpeed);
         checkCollisions();
         if (countdownSeconds > 0 && RaceTime() >= countdownSeconds) { countdownSeconds = 0; TimeFinished(); FinishRace(); }
@@ -222,11 +228,21 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private float steeringMoveDistance(float effectiveGrip) { return Math.max(7f, Math.abs(speed) * 1.35f) * effectiveGrip; }
     private void checkCollisions() {
         RectF car = rect(carX, carY, carWidth, carHeight);
-        if (car.left < (view.getWidth() - roadWidth) / 2f || car.right > (view.getWidth() + roadWidth) / 2f) { WhenCarHitsWall(); Damage(5); speed *= -0.25f; carX = Math.max((view.getWidth()-roadWidth)/2f + carWidth/2, Math.min((view.getWidth()+roadWidth)/2f - carWidth/2, carX)); }
+        float left = mainRoadLeft(); float right = mainRoadRight();
+        if (car.left < left || car.right > right) { WhenCarHitsWall(); Damage(5); speed *= -0.25f; carX = Math.max(left + carWidth/2, Math.min(right - carWidth/2, carX)); }
         for (int i = coins.size() - 1; i >= 0; i--) if (RectF.intersects(car, coins.get(i).rect())) { coins.remove(i); coinsCollected++; score += 100; WhenCarHitsCoin(); CoinCollected(100, coinsCollected); }
         for (GameObject o : obstacles) if (RectF.intersects(car, o.rect())) { if (o.type.toLowerCase().contains("powerup")) { WhenCarHitsPowerup(o.type); applyPowerUp(o.type); } else if (o.type.toLowerCase().contains("oil") || o.type.toLowerCase().contains("water")) { WhenCarHitsPowerup(o.type); grip *= 0.7f; } else { WhenCarCrash(); CarCrash(); Damage(15); speed *= -0.4f; } }
         for (GameObject o : opponents) if (RectF.intersects(car, o.rect())) { WhenCarCrash(); CarCrash(); Damage(20); speed *= -0.5f; }
         for (int i = 0; i < checkpoints.size(); i++) if (RectF.intersects(car, checkpoints.get(i).rect())) { CheckpointReached(i + 1); if (i == checkpoints.size() - 1) { lap++; if (lap > maxLap) { PlayerWin(); FinishRace(); } } }
+    }
+    private float mainRoadLeft() { return view.getWidth() * 0.15f; }
+    private float mainRoadRight() { return view.getWidth() * 0.85f; }
+    private void pushBackToMainRoad() {
+        if (view.getWidth() <= 0) return;
+        float leftLimit = mainRoadLeft() + carWidth / 2f;
+        float rightLimit = mainRoadRight() - carWidth / 2f;
+        if (carX < leftLimit) carX = Math.min(leftLimit, carX + Math.max(3f, roadSpeed * 0.9f));
+        else if (carX > rightLimit) carX = Math.max(rightLimit, carX - Math.max(3f, roadSpeed * 0.9f));
     }
     private RectF rect(float x, float y, float w, float h) { return new RectF(x - w/2, y - h/2, x + w/2, y + h/2); }
     private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
@@ -251,12 +267,33 @@ public class EasyRacerEngine extends AndroidViewComponent {
             brakePressed = brakeButton.contains(x, y);
             invalidate(); return true; }
         private void drawSky(Canvas c) { p.setShader(new LinearGradient(0, 0, 0, getHeight(), Color.rgb(16, 27, 45), Color.rgb(5, 8, 14), Shader.TileMode.CLAMP)); c.drawRect(0, 0, getWidth(), getHeight(), p); p.setShader(null); }
-        private void drawRoad(Canvas c) { float left = (getWidth()-roadWidth)/2f; p.setColor(sideColor()); c.drawRect(0, 0, left, getHeight(), p); c.drawRect(left+roadWidth, 0, getWidth(), getHeight(), p); p.setShader(new LinearGradient(left, 0, left+roadWidth, 0, new int[] { Color.rgb(35,35,38), roadColor(), Color.rgb(35,35,38) }, null, Shader.TileMode.CLAMP)); c.drawRoundRect(new RectF(left, -18, left+roadWidth, getHeight()+18), 24, 24, p); p.setShader(null); p.setColor(Color.rgb(235,235,220)); p.setStrokeWidth(8); c.drawLine(left + 12, 0, left + 12, getHeight(), p); c.drawLine(left + roadWidth - 12, 0, left + roadWidth - 12, getHeight(), p); p.setStrokeWidth(5); int lanes = Math.max(1, roadLanes); for (int lane = 1; lane < lanes; lane++) { float lx = left + (roadWidth / lanes) * lane; for (int y = (int)(roadOffset % 96) - 96; y < getHeight(); y += 96) c.drawLine(lx, y, lx, y + ("Solid".equalsIgnoreCase(roadMarking) ? 88 : 46), p); } p.setColor(Color.argb(70, 255, 255, 255)); for (int y = (int)(roadOffset % 140) - 140; y < getHeight(); y += 140) c.drawOval(new RectF(left + 35, y, left + 95, y + 25), p); if (roadBitmap != null) { RectF dst = new RectF(left, -roadOffset % roadHeight, left+roadWidth, roadHeight - roadOffset % roadHeight); c.drawBitmap(roadBitmap, null, dst, p); if (infiniteMode) c.drawBitmap(roadBitmap, null, new RectF(left, dst.bottom, left+roadWidth, dst.bottom+roadHeight), p); } }
+        private void drawRoad(Canvas c) {
+            float leftSideRight = getWidth() * 0.15f;
+            float mainLeft = leftSideRight;
+            float mainRight = getWidth() * 0.85f;
+            float rightSideLeft = mainRight;
+            roadWidth = mainRight - mainLeft;
+            drawScrollingImageOrColor(c, leftRoadBitmap, new RectF(0, 0, leftSideRight, getHeight()), sideColor());
+            drawScrollingImageOrColor(c, rightRoadBitmap, new RectF(rightSideLeft, 0, getWidth(), getHeight()), sideColor());
+            if (roadBitmap != null) {
+                drawScrollingImageOrColor(c, roadBitmap, new RectF(mainLeft, 0, mainRight, getHeight()), roadColor());
+                return;
+            }
+            float left = mainLeft;
+            p.setShader(new LinearGradient(left, 0, mainRight, 0, new int[] { Color.rgb(35,35,38), roadColor(), Color.rgb(35,35,38) }, null, Shader.TileMode.CLAMP)); c.drawRoundRect(new RectF(left, -18, mainRight, getHeight()+18), 24, 24, p); p.setShader(null); p.setColor(Color.rgb(235,235,220)); p.setStrokeWidth(8); c.drawLine(left + 12, 0, left + 12, getHeight(), p); c.drawLine(mainRight - 12, 0, mainRight - 12, getHeight(), p); p.setStrokeWidth(5); int lanes = Math.max(1, roadLanes); for (int lane = 1; lane < lanes; lane++) { float lx = left + (roadWidth / lanes) * lane; for (int y = (int)(roadOffset % 96) - 96; y < getHeight(); y += 96) c.drawLine(lx, y, lx, y + ("Solid".equalsIgnoreCase(roadMarking) ? 88 : 46), p); } p.setColor(Color.argb(70, 255, 255, 255)); for (int y = (int)(roadOffset % 140) - 140; y < getHeight(); y += 140) c.drawOval(new RectF(left + 35, y, left + 95, y + 25), p);
+        }
+        private void drawScrollingImageOrColor(Canvas c, Bitmap bitmap, RectF area, int color) {
+            if (bitmap == null) { p.setColor(color); c.drawRect(area, p); return; }
+            float tileHeight = roadHeight > 0 ? roadHeight : getHeight();
+            float top = -roadOffset % tileHeight;
+            RectF dst = new RectF(area.left, top, area.right, top + tileHeight);
+            while (dst.top < getHeight()) { c.drawBitmap(bitmap, null, dst, p); dst.offset(0, tileHeight); }
+        }
         private int roadColor() { String t = roadSurface == null ? "" : roadSurface.toLowerCase(); if (t.contains("sand")) return Color.rgb(166, 128, 72); if (t.contains("ice")) return Color.rgb(134, 174, 190); if (t.contains("dirt")) return Color.rgb(92, 66, 45); return Color.rgb(54, 57, 62); }
         private int sideColor() { String t = roadSideStyle == null ? "" : roadSideStyle.toLowerCase(); if (t.contains("desert") || t.contains("beach")) return Color.rgb(190, 152, 88); if (t.contains("snow")) return Color.rgb(210, 225, 230); if (t.contains("forest") || t.contains("mountain")) return Color.rgb(27, 75, 42); if (t.contains("cyber")) return Color.rgb(34, 20, 55); return Color.rgb(31, 78, 56); }
         private void drawVehicle(Canvas c) { Bitmap b = bikeMode ? bikeBitmap : carBitmap; RectF dst = rect(carX, carY, carWidth, carHeight); c.save(); c.rotate(angle, carX, carY); if (b != null) c.drawBitmap(b, null, dst, p); else { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(dst.left+8,dst.bottom-18,dst.right-8,dst.bottom+10),p); p.setColor(bikeMode ? Color.CYAN : Color.rgb(22, 190, 96)); c.drawRoundRect(dst, 18, 18, p); p.setColor(Color.rgb(160, 230, 255)); c.drawRoundRect(new RectF(dst.left+18,dst.top+24,dst.right-18,dst.top+62),10,10,p); p.setColor(Color.BLACK); c.drawRect(dst.left-8,dst.top+28,dst.left+8,dst.top+58,p); c.drawRect(dst.right-8,dst.top+28,dst.right+8,dst.top+58,p); c.drawRect(dst.left-8,dst.bottom-58,dst.left+8,dst.bottom-28,p); c.drawRect(dst.right-8,dst.bottom-58,dst.right+8,dst.bottom-28,p); } c.restore(); }
         private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { if (b != null) c.drawBitmap(b, null, o.rect(), p); else { p.setColor(color); c.drawRoundRect(o.rect(), 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } } }
-        private void drawHud(Canvas c) { p.setTextSize(28); p.setColor(Color.argb(190,0,0,0)); c.drawRoundRect(new RectF(16, 16, 280, 172), 18, 18, p); p.setColor(Color.WHITE); c.drawText("Speed " + (int)Math.abs(speed * 10), 32, 50, p); c.drawText("Score " + score, 32, 84, p); c.drawText("Lap " + lap + "/" + maxLap, 32, 118, p); c.drawText("Health " + health, 32, 152, p); if (fuelEnabled) c.drawText("Fuel " + fuel, 32, 186, p); if (nitroEnabled) c.drawText("Nitro " + nitro, 32, 220, p); }
+        private void drawHud(Canvas c) { p.setTextSize(20); p.setColor(Color.argb(128,0,0,0)); c.drawRoundRect(new RectF(16, 16, 250, 150), 18, 18, p); p.setColor(Color.WHITE); c.drawText("Speed " + (int)Math.abs(speed * 10), 32, 50, p); c.drawText("Score " + score, 32, 84, p); c.drawText("Lap " + lap + "/" + maxLap, 32, 118, p); c.drawText("Health " + health, 32, 140, p); if (fuelEnabled) c.drawText("Fuel " + fuel, 32, 166, p); if (nitroEnabled) c.drawText("Nitro " + nitro, 32, 192, p); }
         private void drawControls(Canvas c) { float h = getHeight(), w = getWidth(); leftButton.set(22, h-132, 142, h-24);
             rightButton.set(w-142, h-132, w-22, h-24);
             accelerateButton.set(w-286, h-204, w-174, h-96);
@@ -267,8 +304,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
             playButton.set(w-96, 96, w-34, 158);
             scoreButton.set(w-182, 22, w-112, 84);
             drawWaves(c);
-            drawButton(c, leftButton, "‹", leftPressed);
-            drawButton(c, rightButton, "›", rightPressed);
+            drawButton(c, leftButton, "‹", leftPressed, leftNavBitmap);
+            drawButton(c, rightButton, "›", rightPressed, rightNavBitmap);
             drawButton(c, accelerateButton, "▲", acceleratePressed);
             drawButton(c, brakeButton, "▼", brakePressed);
             if (!gameStarted) drawButton(c, startButton, "▶", false);
@@ -276,7 +313,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
             if (raceRunning) drawButton(c, pauseButton, "Ⅱ", false);
             if (gameStarted && !raceRunning) drawButton(c, playButton, "▶", false);
             drawButton(c, scoreButton, "★", false); }
-        private void drawButton(Canvas c, RectF r, String label, boolean pressed) { int top = pressed ? Color.rgb(18, 132, 180) : Color.rgb(31, 54, 82); int bottom = pressed ? Color.rgb(10, 83, 124) : Color.rgb(13, 25, 43); p.setShader(new LinearGradient(r.left, r.top, r.left, r.bottom, top, bottom, Shader.TileMode.CLAMP)); c.drawRoundRect(r, 22, 22, p); p.setShader(null); p.setColor(Color.argb(95, 255, 255, 255)); p.setStrokeWidth(2); p.setStyle(Paint.Style.STROKE); c.drawRoundRect(new RectF(r.left+2, r.top+2, r.right-2, r.bottom-2), 20, 20, p); p.setColor(Color.rgb(88, 220, 255)); p.setStrokeWidth(3); c.drawRoundRect(r, 22, 22, p); p.setStyle(Paint.Style.FILL); p.setTextAlign(Paint.Align.CENTER); p.setTextSize(label.length() > 1 ? 34 : 42); Paint.FontMetrics fm = p.getFontMetrics(); c.drawText(label, r.centerX(), r.centerY() - (fm.ascent + fm.descent) / 2f, p); p.setTextAlign(Paint.Align.LEFT); }
+        private void drawButton(Canvas c, RectF r, String label, boolean pressed) { drawButton(c, r, label, pressed, null); }
+        private void drawButton(Canvas c, RectF r, String label, boolean pressed, Bitmap icon) { int top = pressed ? Color.rgb(18, 132, 180) : Color.rgb(31, 54, 82); int bottom = pressed ? Color.rgb(10, 83, 124) : Color.rgb(13, 25, 43); p.setShader(new LinearGradient(r.left, r.top, r.left, r.bottom, top, bottom, Shader.TileMode.CLAMP)); c.drawOval(r, p); p.setShader(null); p.setColor(Color.argb(95, 255, 255, 255)); p.setStrokeWidth(2); p.setStyle(Paint.Style.STROKE); c.drawOval(new RectF(r.left+2, r.top+2, r.right-2, r.bottom-2), p); p.setColor(Color.rgb(88, 220, 255)); p.setStrokeWidth(3); c.drawOval(r, p); if (icon != null) { p.setStyle(Paint.Style.FILL); c.drawBitmap(icon, null, new RectF(r.left+12, r.top+12, r.right-12, r.bottom-12), p); return; } p.setStyle(Paint.Style.FILL); p.setTextAlign(Paint.Align.CENTER); p.setTextSize(label.length() > 1 ? 34 : 42); Paint.FontMetrics fm = p.getFontMetrics(); c.drawText(label, r.centerX(), r.centerY() - (fm.ascent + fm.descent) / 2f, p); p.setTextAlign(Paint.Align.LEFT); }
         private void addWave(float x, float y) { waves.add(new TouchWave(x, y, System.currentTimeMillis())); invalidate(); }
         private void drawWaves(Canvas c) { long now = System.currentTimeMillis(); for (int i = waves.size() - 1; i >= 0; i--) { TouchWave wave = waves.get(i); float progress = (now - wave.startedMs) / 520f; if (progress >= 1f) { waves.remove(i); continue; } float radius = 22 + progress * 86; int alpha = (int)(150 * (1f - progress)); p.setShader(new RadialGradient(wave.x, wave.y, radius, Color.argb(alpha, 89, 221, 255), Color.argb(0, 89, 221, 255), Shader.TileMode.CLAMP)); c.drawCircle(wave.x, wave.y, radius, p); p.setShader(null); } if (!waves.isEmpty()) invalidate(); }
         private void drawScoreSidebar(Canvas c) { float w = Math.min(360, getWidth() * 0.42f); RectF panel = new RectF(getWidth()-w, 0, getWidth(), getHeight()); p.setColor(Color.argb(235, 9, 17, 30)); c.drawRect(panel, p); p.setColor(Color.WHITE); p.setTextSize(30); c.drawText("Scores", panel.left+26, 54, p); p.setTextSize(23); c.drawText("Current: " + score, panel.left+26, 105, p); c.drawText("Saved: " + RetrieveScore(currentPlayerId), panel.left+26, 143, p); c.drawText("High Score: " + RetrieveHighScore(), panel.left+26, 181, p); c.drawText("High score", panel.right-138, 181, p); closeSidebarButton.set(panel.left+22, getHeight()-74, panel.right-22, getHeight()-24); drawButton(c, closeSidebarButton, "×", false); }
