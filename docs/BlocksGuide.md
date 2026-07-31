@@ -12,7 +12,7 @@ This guide explains every beginner-facing block added for building a professiona
 ## 2. Game flow blocks
 
 ### `StartRace()`
-Starts the game loop, triggers `RaceStarted`, resets the race timer, and hides the on-screen **START** button. Call it from a custom button or let the built-in on-screen START button call it.
+Starts the game loop, triggers `RaceStarted`, resets the race timer, and hides the on-screen **START** button. Call it from a custom button or let the built-in on-screen START button call it. The road scrolls immediately to create forward-driving motion, even before the player presses accelerate.
 
 ### `PauseRace()`
 Pauses physics, scrolling, scoring, and collision updates. The built-in **PAUSE** button calls this while the race is running.
@@ -27,8 +27,9 @@ Stops the race, stores the final score in the local score database, and triggers
 
 The game surface draws professional touch controls automatically:
 
-- **Left navigation button** on the left end of the screen.
-- **Right navigation button** on the right end of the screen.
+- Circular **Left navigation button** on the left end of the screen. It changes the player car's x position while pressed.
+- Circular **Right navigation button** on the right end of the screen. It changes the player car's x position while pressed.
+- `SetLeftNavigationButtonImage(path)` and `SetRightNavigationButtonImage(path)` let you replace those built-in arrow labels with uploaded button images.
 - Icon-only **START**, **STOP**, **PAUSE**, and **PLAY** buttons for race state.
 - Icon-only **SCORES** button to open the score sidebar and an icon-only close button inside the sidebar.
 - Icon-only accelerator and brake controls near the right side of the road.
@@ -82,7 +83,7 @@ Place this inside `AccelerometerSensor.AccelerationChanged`. Connect the sensor'
 ## 6. Score database blocks
 
 ### `StoreScore(playerId, score)`
-Stores a player's best score in the built-in local database and updates the global high score.
+Stores a player's best score in the built-in local database and updates the global high score. Race score also increases from the number of seconds journeyed, so longer runs earn points even without coins.
 
 ### `RetrieveScore(playerId)`
 Returns the best saved score for a player.
@@ -97,7 +98,7 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 
 1. Add the extension to a landscape screen.
 2. Call `AddToArrangement` if you want it inside an arrangement.
-3. Call `SetCarImage` and optionally `SetRoadImage`.
+3. Call `SetCarImage` and optionally `SetRoadImage`, `SetLeftRoadImage`, and `SetRightRoadImage`. The main road image is centered and uses 70% of the game width; left and right side road images use 15% each. If `SetRoadImage` is set, the generated road artwork is hidden.
 4. Call `CreateRoadTypeBlock("Highway")` or use `ConfigureRoadBlock` for custom physics.
 5. Call `CreateCar()`.
 6. Let the player press the on-screen **START** button or call `StartRace()` from your own button.
@@ -107,7 +108,7 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 
 ## Image blocks: using uploaded App Inventor assets
 
-For `SetCarImage`, `SetOpponentImage`, `SetCoinImage`, `SetBikeImage`, and `SetRoadImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
+For `SetCarImage`, `SetOpponentImage` / `SetOpponentCarImage`, `SetCoinImage`, `SetBikeImage`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage`, and `SetRightNavigationButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
 
 Recommended order:
 
