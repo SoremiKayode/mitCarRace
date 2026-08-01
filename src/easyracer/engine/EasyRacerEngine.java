@@ -82,6 +82,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
         this.container = container;
         this.view = new RacerView(container.$context());
         this.saves = container.$context().getSharedPreferences("EasyRacerEngine", Context.MODE_PRIVATE);
+        container.$add(this);
         setLandscapeMode(true);
         Width(ViewGroup.LayoutParams.MATCH_PARENT);
         Height(ViewGroup.LayoutParams.MATCH_PARENT);
@@ -244,7 +245,27 @@ public class EasyRacerEngine extends AndroidViewComponent {
         if (countdownSeconds > 0 && RaceTime() >= countdownSeconds) { countdownSeconds = 0; TimeFinished(); FinishRace(); }
         view.invalidate();
     }
-    private void updateObjects(ArrayList<GameObject> list, float dy) { for (GameObject o : list) if (autoScroll) o.y += dy; }
+    private void updateObjects(ArrayList<GameObject> list, float dy) {
+        for (GameObject o : list) {
+            if (!autoScroll) continue;
+            if (o.type != null && o.type.toLowerCase().contains("opponent")) updateOpponent(o, dy);
+            else o.y += dy;
+        }
+    }
+    private void updateOpponent(GameObject o, float dy) {
+        if (o.laneX <= 0) o.laneX = nearestLaneCenter(o.x, o.w);
+        o.y += dy + o.vy;
+        float steer = o.laneX - o.x;
+        o.x += Math.max(-2.8f, Math.min(2.8f, steer * 0.035f));
+        float left = mainRoadLeft() + o.w / 2f + 10f;
+        float right = mainRoadRight() - o.w / 2f - 10f;
+        if (view.getWidth() > 0 && right > left) o.x = Math.max(left, Math.min(right, o.x));
+        if (view.getHeight() > 0 && o.y - o.h / 2f > view.getHeight() + 80f) {
+            o.y = randomSpawnY(o.h);
+            o.laneX = randomRoadX(o.w);
+            o.x = o.laneX;
+        }
+    }
     private void moveSideways(int dir) { float effectiveGrip = Math.max(0.1f, grip * roadGrip); angle = 0; carX += dir * steeringMoveDistance(effectiveGrip); if (effectiveGrip < 0.35f) carX += dir * Math.abs(speed) * 0.6f; }
     private float steeringMoveDistance(float effectiveGrip) { return Math.max(7f, Math.abs(speed) * 1.35f) * effectiveGrip; }
     private void checkCollisions() {
@@ -278,7 +299,14 @@ public class EasyRacerEngine extends AndroidViewComponent {
         Bitmap b = load(cleanedPath);
         if (b != null) opponentImages.put(key, b);
         else if (!opponentImages.containsKey(key) && opponentBitmap != null) opponentImages.put(key, opponentBitmap);
-        opponents.add(new GameObject(x, y, Math.max(30, width), Math.max(40, height), "opponent", key));
+        float safeWidth = Math.max(30, width);
+        float safeHeight = Math.max(40, height);
+        float spawnX = x > 0 ? x : randomRoadX(safeWidth);
+        float spawnY = y > 0 ? y : Math.max(safeHeight / 2f + 12f, view.getHeight() * 0.25f);
+        GameObject opponent = new GameObject(spawnX, spawnY, safeWidth, safeHeight, "opponent", key);
+        opponent.vy = Math.max(1.5f, roadSpeed * 0.35f);
+        opponent.laneX = nearestLaneCenter(spawnX, safeWidth);
+        opponents.add(opponent);
         view.invalidate();
     }
     private float randomRoadX(float objectWidth) {
@@ -290,6 +318,13 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private float randomSpawnY(float objectHeight) {
         float h = view.getHeight() > 0 ? view.getHeight() : 720f;
         return -objectHeight / 2f - random.nextFloat() * Math.max(objectHeight, h * 0.65f);
+    }
+    private float nearestLaneCenter(float x, float objectWidth) {
+        int lanes = Math.max(1, roadLanes);
+        float left = mainRoadLeft();
+        float laneWidth = Math.max(objectWidth + 24f, (mainRoadRight() - left) / lanes);
+        int lane = Math.max(0, Math.min(lanes - 1, (int)((x - left) / laneWidth)));
+        return left + laneWidth * lane + laneWidth / 2f;
     }
     private void applyPowerUp(String type) { String t = type == null ? "" : type.toLowerCase(); if (t.contains("nitro")) nitro = 100; if (t.contains("repair")) Repair(30); if (t.contains("double")) score += 200; if (t.contains("shield") || t.contains("invincible")) health = 100; if (t.contains("slow")) roadSpeed *= 0.7f; }
     private void applyWeather() { String w = weather == null ? "" : weather.toLowerCase(); if (w.contains("rain")) roadGrip *= 0.75f; if (w.contains("snow")) roadGrip *= 0.5f; if (w.contains("storm")) { roadGrip *= 0.65f; roadSpeed *= 0.9f; } }
@@ -387,5 +422,5 @@ public class EasyRacerEngine extends AndroidViewComponent {
         private void drawMeter(Canvas c, float left, float top, float right, float bottom, int percent, int color) { RectF bg = new RectF(left, top, right, bottom); p.setColor(Color.argb(120, 255, 255, 255)); c.drawRoundRect(bg, 8, 8, p); RectF fill = new RectF(left, top, left + (right - left) * clamp(percent, 0, 100) / 100f, bottom); p.setColor(color); c.drawRoundRect(fill, 8, 8, p); }
     }
     private static class TouchWave { float x,y; long startedMs; TouchWave(float x,float y,long startedMs){this.x=x;this.y=y;this.startedMs=startedMs;} }
-    private static class GameObject { float x,y,w,h; String type,name; GameObject(float x,float y,float w,float h,String type){this(x,y,w,h,type,"");} GameObject(float x,float y,float w,float h,String type,String name){this.x=x;this.y=y;this.w=w;this.h=h;this.type=type;this.name=name;} RectF rect(){return new RectF(x-w/2,y-h/2,x+w/2,y+h/2);} }
+    private static class GameObject { float x,y,w,h,vy,laneX; String type,name; GameObject(float x,float y,float w,float h,String type){this(x,y,w,h,type,"");} GameObject(float x,float y,float w,float h,String type,String name){this.x=x;this.y=y;this.w=w;this.h=h;this.type=type;this.name=name;} RectF rect(){return new RectF(x-w/2,y-h/2,x+w/2,y+h/2);} }
 }
