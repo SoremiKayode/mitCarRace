@@ -189,6 +189,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SetCarImage(path)` | `path`: uploaded filename, asset path, file path, `file://` URL, or `http(s)` URL. | Sets the player car image. Use a transparent PNG for best results. |
 | `SetBikeImage(path)` | `path`: image location text. | Sets the player bike image used by `CreateBike()`. |
 | `SetOpponentImage(path)` | `path`: image location text, for example `opponent.png`. | Sets the default opponent image and redraws the game immediately. |
+| `SetOpponentVehicle(name, imagePath)` / `SetOpponentVehicleImage(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename or path. | Registers a named opponent car or bike image that can be reused for multiple opponents. |
 | `SetOpponentCarImage(path)` | `path`: image location text. | Alias for `SetOpponentImage(path)`. |
 | `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. |
 | `SetRoadImage(path)` | `path`: image location text. | Replaces the generated middle road with a scrolling road image. |
@@ -202,6 +203,10 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | Block | Parameters | What it does |
 | --- | --- | --- |
 | `CreateOpponent(x, y)` | `x`: horizontal center position; `y`: vertical center position. | Spawns an AI opponent car at the given screen position and redraws immediately. |
+| `CreateOpponentVehicle(name, imagePath, x, y)` | `name`: opponent vehicle name; `imagePath`: optional uploaded filename/path; `x`, `y`: center position. | Spawns a named opponent car or bike with its own image, allowing multiple opponent vehicles on the road. |
+| `CreateOpponentVehicleWithSize(name, imagePath, x, y, width, height)` | Same as above plus custom width and height. | Spawns the whole named opponent vehicle at the requested size. |
+| `SpawnRandomOpponent(name)` | `name`: registered opponent vehicle name. | Places the named opponent at a random valid road position above the screen so it moves into view. |
+| `SpawnRandomOpponentVehicle(name, imagePath)` / `SpawnRandomOpponentCar(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename/path. | Registers/uses the image and places the whole opponent car or bike randomly on the road. |
 | `SpawnCoin(x, y)` | `x`: horizontal center position; `y`: vertical center position. | Adds a collectible coin at the given screen position. |
 | `CreateCheckpoint(x, y, width, height)` | `x`, `y`: center position; `width`, `height`: checkpoint rectangle size. | Adds a checkpoint area that triggers `CheckpointReached(index)` when touched. |
 | `CreateObstacle(type, x, y, width, height)` | `type`: text such as `tree`, `rock`, `cone`, `oil`, `water`, `fire`, or `pothole`; `x`, `y`, `width`, `height`: obstacle rectangle. | Adds a damaging obstacle or grip-changing hazard. |
