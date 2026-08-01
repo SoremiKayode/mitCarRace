@@ -29,6 +29,7 @@ import com.google.appinventor.components.runtime.util.MediaUtil;
 
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URL;
@@ -50,6 +51,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private final SharedPreferences saves;
 
     private Bitmap carBitmap, bikeBitmap, roadBitmap, leftRoadBitmap, rightRoadBitmap, coinBitmap, opponentBitmap, leftNavBitmap, rightNavBitmap;
+    private String carImagePath = "", bikeImagePath = "", opponentImagePath = "";
     private String carName = "Player";
     private boolean bikeMode = false, raceRunning = false, gameStarted = false, autoScroll = true, infiniteMode = true;
     private boolean fuelEnabled = false, nitroEnabled = false, hudEnabled = true, miniMapEnabled = true;
@@ -125,16 +127,16 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Moves the car right without rotating it, keeping the car facing forward.") public void MoveRight() { moveSideways(1); }
     @SimpleFunction(description = "Uses nitro boost if enabled and available.") public void UseNitro() { if (nitroEnabled && nitro > 0) { nitro = Math.max(0, nitro - 8); speed = Math.min(maxSpeed * 1.7f, speed + 5); NitroStarted(); if (nitro == 0) NitroEnded(); } }
 
-    @SimpleFunction(description = "Sets player car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: icon.png") public void SetCarImage(String path) { carBitmap = load(path); }
-    @SimpleFunction(description = "Sets player bike image from asset path or file path.") public void SetBikeImage(String path) { bikeBitmap = load(path); }
+    @SimpleFunction(description = "Sets player car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: icon.png") public void SetCarImage(String path) { carImagePath = cleanPath(path); carBitmap = load(carImagePath); view.invalidate(); }
+    @SimpleFunction(description = "Sets player bike image from asset path or file path.") public void SetBikeImage(String path) { bikeImagePath = cleanPath(path); bikeBitmap = load(bikeImagePath); view.invalidate(); }
     @SimpleFunction(description = "Sets the centered main scrolling road image from asset path or file path. When set, the built-in generated road is hidden and the image fills the middle 70% road area.") public void SetRoadImage(String path) { roadBitmap = load(path); }
     @SimpleFunction(description = "Sets the scrolling left road-side image from asset path or file path. It fills the left 15% side area by default.") public void SetLeftRoadImage(String path) { leftRoadBitmap = load(path); }
     @SimpleFunction(description = "Sets the scrolling right road-side image from asset path or file path. It fills the right 15% side area by default.") public void SetRightRoadImage(String path) { rightRoadBitmap = load(path); }
     @SimpleFunction(description = "Sets road width in pixels.") public void SetRoadWidth(float width) { roadWidth = width; }
     @SimpleFunction(description = "Sets road height in pixels.") public void SetRoadHeight(float height) { roadHeight = height; }
-    @SimpleFunction(description = "Sets default opponent image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: opponent.png") public void SetOpponentImage(String path) { opponentBitmap = load(path); view.invalidate(); }
+    @SimpleFunction(description = "Sets default opponent image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: opponent.png") public void SetOpponentImage(String path) { opponentImagePath = cleanPath(path); opponentBitmap = load(opponentImagePath); if (opponentBitmap != null) opponentImages.put(cleanOpponentName("Opponent"), opponentBitmap); view.invalidate(); }
     @SimpleFunction(description = "Sets default opponent car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Alias for SetOpponentImage.") public void SetOpponentCarImage(String path) { SetOpponentImage(path); }
-    @SimpleFunction(description = "Names an opponent car or bike and assigns its image. Use the same name when creating or randomly spawning that opponent.") public void SetOpponentVehicle(String name, String imagePath) { Bitmap b = load(imagePath); String key = cleanOpponentName(name); if (b != null) opponentImages.put(key, b); if (opponentBitmap == null) opponentBitmap = b; view.invalidate(); }
+    @SimpleFunction(description = "Names an opponent car or bike and assigns its image. Use the same name when creating or randomly spawning that opponent.") public void SetOpponentVehicle(String name, String imagePath) { Bitmap b = load(imagePath); String key = cleanOpponentName(name); if (b != null) opponentImages.put(key, b); if (opponentBitmap == null && b != null) opponentBitmap = b; view.invalidate(); }
     @SimpleFunction(description = "Alias for SetOpponentVehicle for projects that call the block SetOpponentVehicleImage(name, imagePath).") public void SetOpponentVehicleImage(String name, String imagePath) { SetOpponentVehicle(name, imagePath); }
     @SimpleFunction(description = "Sets default coin image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: coin.png") public void SetCoinImage(String path) { coinBitmap = load(path); }
     @SimpleFunction(description = "Sets the left navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetLeftNavigationButtonImage(String path) { leftNavBitmap = load(path); }
@@ -272,6 +274,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
         String key = cleanOpponentName(name);
         Bitmap b = load(imagePath);
         if (b != null) opponentImages.put(key, b);
+        else if (!opponentImages.containsKey(key) && opponentBitmap != null) opponentImages.put(key, opponentBitmap);
         opponents.add(new GameObject(x, y, Math.max(30, width), Math.max(40, height), "opponent", key));
         view.invalidate();
     }
@@ -287,12 +290,17 @@ public class EasyRacerEngine extends AndroidViewComponent {
     }
     private void applyPowerUp(String type) { String t = type == null ? "" : type.toLowerCase(); if (t.contains("nitro")) nitro = 100; if (t.contains("repair")) Repair(30); if (t.contains("double")) score += 200; if (t.contains("shield") || t.contains("invincible")) health = 100; if (t.contains("slow")) roadSpeed *= 0.7f; }
     private void applyWeather() { String w = weather == null ? "" : weather.toLowerCase(); if (w.contains("rain")) roadGrip *= 0.75f; if (w.contains("snow")) roadGrip *= 0.5f; if (w.contains("storm")) { roadGrip *= 0.65f; roadSpeed *= 0.9f; } }
+    private String cleanPath(String path) { return path == null ? "" : path.trim(); }
     private Bitmap load(String path) {
-        if (path == null || path.trim().length() == 0) return null;
-        String key = path.trim();
+        String key = cleanPath(path);
+        if (key.length() == 0) return null;
         if (imageCache.containsKey(key)) return imageCache.get(key);
         Bitmap b = decodeBitmap(key);
+        if (b == null && key.startsWith("/android_asset/")) b = decodeBitmap("file://" + key);
         if (b == null && key.indexOf('/') < 0) b = decodeBitmap("file:///android_asset/" + key);
+        if (b == null && key.indexOf('/') < 0) b = decodeBitmap("file:///android_asset/assets/" + key);
+        if (b == null && key.indexOf('/') < 0) b = decodeBitmap("assets/" + key);
+        if (b == null) b = decodeBitmap(new File(key).getName());
         if (b != null) imageCache.put(key, b);
         return b;
     }
@@ -347,8 +355,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
         }
         private int roadColor() { String t = roadSurface == null ? "" : roadSurface.toLowerCase(); if (t.contains("sand")) return Color.rgb(166, 128, 72); if (t.contains("ice")) return Color.rgb(134, 174, 190); if (t.contains("dirt")) return Color.rgb(92, 66, 45); return Color.rgb(54, 57, 62); }
         private int sideColor() { String t = roadSideStyle == null ? "" : roadSideStyle.toLowerCase(); if (t.contains("desert") || t.contains("beach")) return Color.rgb(190, 152, 88); if (t.contains("snow")) return Color.rgb(210, 225, 230); if (t.contains("forest") || t.contains("mountain")) return Color.rgb(27, 75, 42); if (t.contains("cyber")) return Color.rgb(34, 20, 55); return Color.rgb(31, 78, 56); }
-        private void drawVehicle(Canvas c) { Bitmap b = bikeMode ? bikeBitmap : carBitmap; RectF dst = rect(carX, carY, carWidth, carHeight); c.save(); c.rotate(angle, carX, carY); if (b != null) c.drawBitmap(b, null, dst, p); else { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(dst.left+8,dst.bottom-18,dst.right-8,dst.bottom+10),p); p.setColor(bikeMode ? Color.CYAN : Color.rgb(22, 190, 96)); c.drawRoundRect(dst, 18, 18, p); p.setColor(Color.rgb(160, 230, 255)); c.drawRoundRect(new RectF(dst.left+18,dst.top+24,dst.right-18,dst.top+62),10,10,p); p.setColor(Color.BLACK); c.drawRect(dst.left-8,dst.top+28,dst.left+8,dst.top+58,p); c.drawRect(dst.right-8,dst.top+28,dst.right+8,dst.top+58,p); c.drawRect(dst.left-8,dst.bottom-58,dst.left+8,dst.bottom-28,p); c.drawRect(dst.right-8,dst.bottom-58,dst.right+8,dst.bottom-28,p); } c.restore(); }
-        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); boolean isOpponent = o.type != null && o.type.toLowerCase().contains("opponent"); Bitmap drawBitmap = isOpponent && o.name != null && opponentImages.containsKey(o.name) ? opponentImages.get(o.name) : b; if (drawBitmap != null) { p.setAlpha(255); c.drawBitmap(drawBitmap, null, r, p); p.setAlpha(255); if (isOpponent) drawOpponentOutline(c, r); } else if (isOpponent) { drawOpponentFallback(c, r); } else { p.setColor(color); c.drawRoundRect(r, 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } } }
+        private void drawVehicle(Canvas c) { Bitmap b = bikeMode ? bikeBitmap : carBitmap; if (b == null) { b = bikeMode ? load(bikeImagePath) : load(carImagePath); if (bikeMode) bikeBitmap = b; else carBitmap = b; } RectF dst = rect(carX, carY, carWidth, carHeight); c.save(); c.rotate(angle, carX, carY); if (b != null) c.drawBitmap(b, null, dst, p); else { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(dst.left+8,dst.bottom-18,dst.right-8,dst.bottom+10),p); p.setColor(bikeMode ? Color.CYAN : Color.rgb(22, 190, 96)); c.drawRoundRect(dst, 18, 18, p); p.setColor(Color.rgb(160, 230, 255)); c.drawRoundRect(new RectF(dst.left+18,dst.top+24,dst.right-18,dst.top+62),10,10,p); p.setColor(Color.BLACK); c.drawRect(dst.left-8,dst.top+28,dst.left+8,dst.top+58,p); c.drawRect(dst.right-8,dst.top+28,dst.right+8,dst.top+58,p); c.drawRect(dst.left-8,dst.bottom-58,dst.left+8,dst.bottom-28,p); c.drawRect(dst.right-8,dst.bottom-58,dst.right+8,dst.bottom-28,p); } c.restore(); }
+        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); boolean isOpponent = o.type != null && o.type.toLowerCase().contains("opponent"); Bitmap drawBitmap = isOpponent && o.name != null && opponentImages.containsKey(o.name) ? opponentImages.get(o.name) : b; if (isOpponent && drawBitmap == null) { drawBitmap = load(opponentImagePath); if (drawBitmap != null) { opponentBitmap = drawBitmap; opponentImages.put(cleanOpponentName("Opponent"), drawBitmap); } } if (drawBitmap != null) { p.setAlpha(255); c.drawBitmap(drawBitmap, null, r, p); p.setAlpha(255); if (isOpponent) drawOpponentOutline(c, r); } else if (isOpponent) { drawOpponentFallback(c, r); } else { p.setColor(color); c.drawRoundRect(r, 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } } }
         private void drawOpponentOutline(Canvas c, RectF r) { p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(4); p.setColor(Color.argb(210, 255, 80, 90)); c.drawRoundRect(r, 16, 16, p); p.setStyle(Paint.Style.FILL); }
         private void drawOpponentFallback(Canvas c, RectF r) { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(r.left+8,r.bottom-18,r.right-8,r.bottom+10),p); p.setColor(Color.rgb(210, 56, 64)); c.drawRoundRect(r, 18, 18, p); p.setColor(Color.rgb(255, 210, 120)); c.drawRoundRect(new RectF(r.left+18, r.top+24, r.right-18, r.top+62), 10, 10, p); p.setColor(Color.rgb(75, 14, 20)); c.drawRoundRect(new RectF(r.left+18, r.bottom-66, r.right-18, r.bottom-24), 10, 10, p); p.setColor(Color.BLACK); c.drawRect(r.left-8, r.top+28, r.left+8, r.top+58, p); c.drawRect(r.right-8, r.top+28, r.right+8, r.top+58, p); c.drawRect(r.left-8, r.bottom-58, r.left+8, r.bottom-28, p); c.drawRect(r.right-8, r.bottom-58, r.right+8, r.bottom-28, p); }
         private void drawHud(Canvas c) { p.setTextSize(20); p.setColor(Color.argb(128,0,0,0)); c.drawRoundRect(new RectF(16, 16, 250, 150), 18, 18, p); p.setColor(Color.WHITE); c.drawText("Speed " + (int)Math.abs(speed * 10), 32, 50, p); c.drawText("Score " + score, 32, 84, p); c.drawText("Lap " + lap + "/" + maxLap, 32, 118, p); c.drawText("Health " + health, 32, 140, p); if (fuelEnabled) c.drawText("Fuel " + fuel, 32, 166, p); if (nitroEnabled) c.drawText("Nitro " + nitro, 32, 192, p); }
