@@ -190,7 +190,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SetBikeImage(path)` | `path`: image location text. | Sets the player bike image used by `CreateBike()`. |
 | `SetOpponentImage(path)` | `path`: image location text, for example `opponent.png`. | Sets the default opponent image and redraws the game immediately. |
 | `SetOpponentVehicle(name, imagePath)` / `SetOpponentVehicleImage(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename or path. | Registers a named opponent car or bike image that can be reused for multiple opponents. |
-| `SetOpponentCarImage(path)` | `path`: image location text. | Alias for `SetOpponentImage(path)`. |
+| `SetOpponentCarImage(path)` / `OpponentCarImage` property | `path`: image location text. | Sets the default opponent car image; use this when your project has the `opponentCarImage` property block. |
 | `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. |
 | `SetRoadImage(path)` | `path`: image location text. | Replaces the generated middle road with a scrolling road image. |
 | `SetLeftRoadImage(path)` | `path`: image location text. | Sets the scrolling image for the left 15% roadside area. |

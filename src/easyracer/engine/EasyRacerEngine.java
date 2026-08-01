@@ -136,7 +136,9 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Sets road height in pixels.") public void SetRoadHeight(float height) { roadHeight = height; }
     @SimpleFunction(description = "Sets default opponent image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: opponent.png") public void SetOpponentImage(String path) { opponentImagePath = cleanPath(path); opponentBitmap = load(opponentImagePath); if (opponentBitmap != null) opponentImages.put(cleanOpponentName("Opponent"), opponentBitmap); view.invalidate(); }
     @SimpleFunction(description = "Sets default opponent car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Alias for SetOpponentImage.") public void SetOpponentCarImage(String path) { SetOpponentImage(path); }
-    @SimpleFunction(description = "Names an opponent car or bike and assigns its image. Use the same name when creating or randomly spawning that opponent.") public void SetOpponentVehicle(String name, String imagePath) { Bitmap b = load(imagePath); String key = cleanOpponentName(name); if (b != null) opponentImages.put(key, b); if (opponentBitmap == null && b != null) opponentBitmap = b; view.invalidate(); }
+    @SimpleProperty(description = "Default opponent car image filename, asset path, URL, or file path. This property is the same as SetOpponentCarImage, for projects that use the opponentCarImage property block.") public void OpponentCarImage(String path) { SetOpponentImage(path); }
+    @SimpleProperty(description = "Returns the current default opponent car image path.") public String OpponentCarImage() { return opponentImagePath; }
+    @SimpleFunction(description = "Names an opponent car or bike and assigns its image. Use the same name when creating or randomly spawning that opponent.") public void SetOpponentVehicle(String name, String imagePath) { String cleanedPath = cleanPath(imagePath); Bitmap b = load(cleanedPath); String key = cleanOpponentName(name); if (b != null) opponentImages.put(key, b); if (opponentBitmap == null && b != null) opponentBitmap = b; view.invalidate(); }
     @SimpleFunction(description = "Alias for SetOpponentVehicle for projects that call the block SetOpponentVehicleImage(name, imagePath).") public void SetOpponentVehicleImage(String name, String imagePath) { SetOpponentVehicle(name, imagePath); }
     @SimpleFunction(description = "Sets default coin image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: coin.png") public void SetCoinImage(String path) { coinBitmap = load(path); }
     @SimpleFunction(description = "Sets the left navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetLeftNavigationButtonImage(String path) { leftNavBitmap = load(path); }
@@ -272,7 +274,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private String cleanOpponentName(String name) { return name == null || name.trim().length() == 0 ? "Opponent" : name.trim(); }
     private void addOpponent(String name, String imagePath, float x, float y, float width, float height) {
         String key = cleanOpponentName(name);
-        Bitmap b = load(imagePath);
+        String cleanedPath = cleanPath(imagePath);
+        Bitmap b = load(cleanedPath);
         if (b != null) opponentImages.put(key, b);
         else if (!opponentImages.containsKey(key) && opponentBitmap != null) opponentImages.put(key, opponentBitmap);
         opponents.add(new GameObject(x, y, Math.max(30, width), Math.max(40, height), "opponent", key));
