@@ -303,14 +303,25 @@ public class EasyRacerEngine extends AndroidViewComponent {
         else if (!opponentImages.containsKey(key) && opponentBitmap != null) opponentImages.put(key, opponentBitmap);
         float safeWidth = Math.max(30, width);
         float safeHeight = Math.max(40, height);
-        float spawnX = x > 0 ? x : randomRoadX(safeWidth);
-        float spawnY = y > 0 ? y : Math.max(safeHeight / 2f + 12f, view.getHeight() * 0.25f);
+        boolean viewReady = view.getWidth() > 0 && view.getHeight() > 0;
+        float spawnX = x > 0 && viewReady ? x : randomRoadX(safeWidth);
+        float spawnY = y > 0 && viewReady ? y : Math.max(safeHeight / 2f + 12f, viewReady ? view.getHeight() * 0.25f : safeHeight / 2f + 12f);
         GameObject opponent = new GameObject(spawnX, spawnY, safeWidth, safeHeight, "opponent", key);
+        opponent.needsLayoutPosition = !viewReady;
         opponent.imagePath = cleanedPath.length() > 0 ? cleanedPath : opponentImagePaths.containsKey(key) ? opponentImagePaths.get(key) : opponentImagePath;
         opponent.vy = Math.max(1.5f, roadSpeed * 0.35f);
         opponent.laneX = nearestLaneCenter(spawnX, safeWidth);
         opponents.add(opponent);
         view.invalidate();
+    }
+    private void placePendingOpponentsOnRoad() {
+        for (GameObject opponent : opponents) {
+            if (!opponent.needsLayoutPosition) continue;
+            opponent.x = randomRoadX(opponent.w);
+            opponent.y = Math.max(opponent.h / 2f + 12f, view.getHeight() * 0.25f);
+            opponent.laneX = nearestLaneCenter(opponent.x, opponent.w);
+            opponent.needsLayoutPosition = false;
+        }
     }
     private float randomRoadX(float objectWidth) {
         float left = mainRoadLeft() + objectWidth / 2f + 12f;
@@ -367,6 +378,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
         private final RectF startButton = new RectF(), pauseButton = new RectF(), playButton = new RectF(), stopButton = new RectF(), scoreButton = new RectF(), closeSidebarButton = new RectF();
         private final ArrayList<TouchWave> waves = new ArrayList<TouchWave>();
         RacerView(Context c) { super(c); setBackgroundColor(Color.rgb(10, 14, 22)); setFocusable(true); }
+        @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) { super.onSizeChanged(w, h, oldw, oldh); placePendingOpponentsOnRoad(); }
         @Override protected void onDraw(Canvas c) { super.onDraw(c); drawSky(c); drawRoad(c); drawList(c, coins, coinBitmap, Color.YELLOW); drawList(c, obstacles, null, Color.RED); drawList(c, opponents, opponentBitmap, Color.BLUE); drawVehicle(c); if (hudEnabled) drawHud(c); drawControls(c); if (scoreSidebarOpen) drawScoreSidebar(c); }
         @Override public boolean onTouchEvent(MotionEvent e) { float x = e.getX(), y = e.getY(); int action = e.getActionMasked(); boolean down = action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE; if (action == MotionEvent.ACTION_DOWN) { addWave(x, y); if (startButton.contains(x, y) && !gameStarted) StartRace(); else if (pauseButton.contains(x, y) && raceRunning) PauseRace(); else if (playButton.contains(x, y) && gameStarted && !raceRunning) PlayRace(); else if (stopButton.contains(x, y) && gameStarted) StopRace(); else if (scoreButton.contains(x, y)) { scoreSidebarOpen = !scoreSidebarOpen; invalidate(); } else if (scoreSidebarOpen && closeSidebarButton.contains(x, y)) CloseScoreSidebar(); } if (!down) { leftPressed = rightPressed = false; invalidate(); return true; } leftPressed = leftButton.contains(x, y);
             rightPressed = rightButton.contains(x, y);
@@ -426,5 +438,5 @@ public class EasyRacerEngine extends AndroidViewComponent {
         private void drawMeter(Canvas c, float left, float top, float right, float bottom, int percent, int color) { RectF bg = new RectF(left, top, right, bottom); p.setColor(Color.argb(120, 255, 255, 255)); c.drawRoundRect(bg, 8, 8, p); RectF fill = new RectF(left, top, left + (right - left) * clamp(percent, 0, 100) / 100f, bottom); p.setColor(color); c.drawRoundRect(fill, 8, 8, p); }
     }
     private static class TouchWave { float x,y; long startedMs; TouchWave(float x,float y,long startedMs){this.x=x;this.y=y;this.startedMs=startedMs;} }
-    private static class GameObject { float x,y,w,h,vy,laneX; String type,name,imagePath; GameObject(float x,float y,float w,float h,String type){this(x,y,w,h,type,"");} GameObject(float x,float y,float w,float h,String type,String name){this.x=x;this.y=y;this.w=w;this.h=h;this.type=type;this.name=name;} RectF rect(){return new RectF(x-w/2,y-h/2,x+w/2,y+h/2);} }
+    private static class GameObject { float x,y,w,h,vy,laneX; boolean needsLayoutPosition; String type,name,imagePath; GameObject(float x,float y,float w,float h,String type){this(x,y,w,h,type,"");} GameObject(float x,float y,float w,float h,String type,String name){this.x=x;this.y=y;this.w=w;this.h=h;this.type=type;this.name=name;} RectF rect(){return new RectF(x-w/2,y-h/2,x+w/2,y+h/2);} }
 }
