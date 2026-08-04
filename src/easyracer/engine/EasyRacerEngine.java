@@ -136,7 +136,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Sets the scrolling right road-side image from asset path or file path. It fills the right 15% side area by default.") public void SetRightRoadImage(String path) { rightRoadBitmap = load(path); }
     @SimpleFunction(description = "Sets road width in pixels.") public void SetRoadWidth(float width) { roadWidth = width; }
     @SimpleFunction(description = "Sets road height in pixels.") public void SetRoadHeight(float height) { roadHeight = height; }
-    @SimpleFunction(description = "Sets default opponent image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: opponent.png") public void SetOpponentImage(String path) { opponentImagePath = cleanPath(path); opponentImagePaths.put(cleanOpponentName("Opponent"), opponentImagePath); opponentBitmap = load(opponentImagePath); if (opponentBitmap != null) opponentImages.put(cleanOpponentName("Opponent"), opponentBitmap); view.invalidate(); }
+    @SimpleFunction(description = "Sets default opponent image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: opponent.png. If no opponent exists yet, one is placed on the road immediately so it is visible before the race starts, like the main car.") public void SetOpponentImage(String path) { opponentImagePath = cleanPath(path); opponentImagePaths.put(cleanOpponentName("Opponent"), opponentImagePath); opponentBitmap = load(opponentImagePath); if (opponentBitmap != null) opponentImages.put(cleanOpponentName("Opponent"), opponentBitmap); ensureDefaultOpponentVisible(); view.invalidate(); }
     @SimpleFunction(description = "Sets default opponent car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Alias for SetOpponentImage.") public void SetOpponentCarImage(String path) { SetOpponentImage(path); }
     @SimpleProperty(description = "Default opponent car image filename, asset path, URL, or file path. This property is the same as SetOpponentCarImage, for projects that use the opponentCarImage property block.") public void OpponentCarImage(String path) { SetOpponentImage(path); }
     @SimpleProperty(description = "Returns the current default opponent car image path.") public String OpponentCarImage() { return opponentImagePath; }
@@ -150,8 +150,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Creates an AI opponent at x,y and immediately redraws the race so the opponent is visible.") public void CreateOpponent(float x, float y) { addOpponent(cleanOpponentName("Opponent"), null, x, y, 120, 190); }
     @SimpleFunction(description = "Creates a named AI opponent car or bike at x,y with an optional image path and immediately redraws it.") public void CreateOpponentVehicle(String name, String imagePath, float x, float y) { addOpponent(cleanOpponentName(name), imagePath, x, y, 120, 190); }
     @SimpleFunction(description = "Creates a named AI opponent car or bike at x,y with custom size and an optional image path.") public void CreateOpponentVehicleWithSize(String name, String imagePath, float x, float y, float width, float height) { addOpponent(cleanOpponentName(name), imagePath, x, y, width, height); }
-    @SimpleFunction(description = "Places the whole named opponent car or bike at a random lane position on the road, usually above the screen so it drives into view.") public void SpawnRandomOpponent(String name) { addOpponent(cleanOpponentName(name), null, randomRoadX(120), randomSpawnY(190), 120, 190); }
-    @SimpleFunction(description = "Places a named opponent car or bike with an image at a random lane position on the road.") public void SpawnRandomOpponentVehicle(String name, String imagePath) { addOpponent(cleanOpponentName(name), imagePath, randomRoadX(120), randomSpawnY(190), 120, 190); }
+    @SimpleFunction(description = "Places the whole named opponent car or bike at a random lane position on the road. Before the race starts it appears on screen immediately; during a race it usually spawns above the screen so it drives into view.") public void SpawnRandomOpponent(String name) { addOpponent(cleanOpponentName(name), null, randomRoadX(120), randomOpponentY(190), 120, 190); }
+    @SimpleFunction(description = "Places a named opponent car or bike with an image at a random lane position on the road. Before the race starts it appears on screen immediately; during a race it usually spawns above the screen so it drives into view.") public void SpawnRandomOpponentVehicle(String name, String imagePath) { addOpponent(cleanOpponentName(name), imagePath, randomRoadX(120), randomOpponentY(190), 120, 190); }
     @SimpleFunction(description = "Alias for SpawnRandomOpponentVehicle for projects that use opponent car wording.") public void SpawnRandomOpponentCar(String name, String imagePath) { SpawnRandomOpponentVehicle(name, imagePath); }
     @SimpleFunction(description = "Spawns a coin at x,y.") public void SpawnCoin(float x, float y) { coins.add(new GameObject(x, y, 44, 44, "coin")); }
     @SimpleFunction(description = "Creates a checkpoint rectangle.") public void CreateCheckpoint(float x, float y, float width, float height) { checkpoints.add(new GameObject(x, y, width, height, "checkpoint")); }
@@ -328,6 +328,16 @@ public class EasyRacerEngine extends AndroidViewComponent {
         float right = mainRoadRight() - objectWidth / 2f - 12f;
         if (view.getWidth() <= 0 || right <= left) return Math.max(80, view.getWidth() / 2f);
         return left + random.nextFloat() * (right - left);
+    }
+
+    private void ensureDefaultOpponentVisible() {
+        if (!opponents.isEmpty()) return;
+        addOpponent(cleanOpponentName("Opponent"), opponentImagePath, randomRoadX(120), randomOpponentY(190), 120, 190);
+    }
+    private float randomOpponentY(float objectHeight) {
+        if (gameStarted || raceRunning) return randomSpawnY(objectHeight);
+        float h = view.getHeight() > 0 ? view.getHeight() : 720f;
+        return Math.max(objectHeight / 2f + 12f, h * 0.28f);
     }
     private float randomSpawnY(float objectHeight) {
         float h = view.getHeight() > 0 ? view.getHeight() : 720f;
