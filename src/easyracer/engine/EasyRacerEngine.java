@@ -51,7 +51,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private final ArrayList<GameObject> checkpoints = new ArrayList<GameObject>();
     private final SharedPreferences saves;
 
-    private Bitmap carBitmap, bikeBitmap, roadBitmap, leftRoadBitmap, rightRoadBitmap, coinBitmap, opponentBitmap, leftNavBitmap, rightNavBitmap;
+    private Bitmap carBitmap, bikeBitmap, roadBitmap, leftRoadBitmap, rightRoadBitmap, coinBitmap, coneBitmap, opponentBitmap, leftNavBitmap, rightNavBitmap;
     private String carImagePath = "", bikeImagePath = "", opponentImagePath = "";
     private String carName = "Player";
     private boolean bikeMode = false, raceRunning = false, gameStarted = false, autoScroll = true, infiniteMode = true;
@@ -142,20 +142,23 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleProperty(description = "Returns the current default opponent car image path.") public String OpponentCarImage() { return opponentImagePath; }
     @SimpleFunction(description = "Names an opponent car or bike and assigns its image. Use the same name when creating or randomly spawning that opponent.") public void SetOpponentVehicle(String name, String imagePath) { String cleanedPath = cleanPath(imagePath); String key = cleanOpponentName(name); if (cleanedPath.length() > 0) opponentImagePaths.put(key, cleanedPath); Bitmap b = load(cleanedPath); if (b != null) opponentImages.put(key, b); if (opponentBitmap == null && b != null) opponentBitmap = b; view.invalidate(); }
     @SimpleFunction(description = "Alias for SetOpponentVehicle for projects that call the block SetOpponentVehicleImage(name, imagePath).") public void SetOpponentVehicleImage(String name, String imagePath) { SetOpponentVehicle(name, imagePath); }
-    @SimpleFunction(description = "Sets default coin image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: coin.png") public void SetCoinImage(String path) { coinBitmap = load(path); }
+    @SimpleFunction(description = "Sets default coin image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: coin.png") public void SetCoinImage(String path) { coinBitmap = load(path); view.invalidate(); }
+    @SimpleFunction(description = "Sets the cone obstacle image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: cone.png") public void SetConeImage(String path) { coneBitmap = load(path); view.invalidate(); }
     @SimpleFunction(description = "Sets the left navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetLeftNavigationButtonImage(String path) { leftNavBitmap = load(path); }
     @SimpleFunction(description = "Sets the right navigation button image from an uploaded App Inventor asset filename, asset path, URL, or file path.") public void SetRightNavigationButtonImage(String path) { rightNavBitmap = load(path); }
     @SimpleFunction(description = "Sets the left arrow button image. Alias for SetLeftNavigationButtonImage.") public void SetLeftArrowButtonImage(String path) { SetLeftNavigationButtonImage(path); }
     @SimpleFunction(description = "Sets the right arrow button image. Alias for SetRightNavigationButtonImage.") public void SetRightArrowButtonImage(String path) { SetRightNavigationButtonImage(path); }
     @SimpleFunction(description = "Creates an AI opponent at x,y and immediately redraws the race so the opponent is visible.") public void CreateOpponent(float x, float y) { addOpponent(cleanOpponentName("Opponent"), null, x, y, 120, 190); }
+    @SimpleFunction(description = "Adds as many default opponent cars as requested. Opponents are placed in road lanes and alternate coming from above and below.") public void AddOpponents(int count) { for (int i = 0; i < Math.max(0, count); i++) addRandomOpponent(cleanOpponentName("Opponent"), null, 120, 190, i % 2 == 0); }
+    @SimpleFunction(description = "Adds as many named opponent cars or bikes as requested with an optional image. Opponents alternate coming from above and below.") public void AddOpponentVehicles(String name, String imagePath, int count) { for (int i = 0; i < Math.max(0, count); i++) addRandomOpponent(cleanOpponentName(name), imagePath, 120, 190, i % 2 == 0); }
     @SimpleFunction(description = "Creates a named AI opponent car or bike at x,y with an optional image path and immediately redraws it.") public void CreateOpponentVehicle(String name, String imagePath, float x, float y) { addOpponent(cleanOpponentName(name), imagePath, x, y, 120, 190); }
     @SimpleFunction(description = "Creates a named AI opponent car or bike at x,y with custom size and an optional image path.") public void CreateOpponentVehicleWithSize(String name, String imagePath, float x, float y, float width, float height) { addOpponent(cleanOpponentName(name), imagePath, x, y, width, height); }
     @SimpleFunction(description = "Places the whole named opponent car or bike at a random lane position on the road. Before the race starts it appears on screen immediately; during a race it usually spawns above the screen so it drives into view.") public void SpawnRandomOpponent(String name) { addOpponent(cleanOpponentName(name), null, randomRoadX(120), randomOpponentY(190), 120, 190); }
     @SimpleFunction(description = "Places a named opponent car or bike with an image at a random lane position on the road. Before the race starts it appears on screen immediately; during a race it usually spawns above the screen so it drives into view.") public void SpawnRandomOpponentVehicle(String name, String imagePath) { addOpponent(cleanOpponentName(name), imagePath, randomRoadX(120), randomOpponentY(190), 120, 190); }
     @SimpleFunction(description = "Alias for SpawnRandomOpponentVehicle for projects that use opponent car wording.") public void SpawnRandomOpponentCar(String name, String imagePath) { SpawnRandomOpponentVehicle(name, imagePath); }
-    @SimpleFunction(description = "Spawns a coin at x,y.") public void SpawnCoin(float x, float y) { coins.add(new GameObject(x, y, 44, 44, "coin")); }
+    @SimpleFunction(description = "Spawns a coin at x,y and redraws immediately.") public void SpawnCoin(float x, float y) { coins.add(new GameObject(x, y, 56, 56, "coin")); view.invalidate(); }
     @SimpleFunction(description = "Creates a checkpoint rectangle.") public void CreateCheckpoint(float x, float y, float width, float height) { checkpoints.add(new GameObject(x, y, width, height, "checkpoint")); }
-    @SimpleFunction(description = "Adds an obstacle such as tree, rock, cone, oil, water, fire, or pothole.") public void CreateObstacle(String type, float x, float y, float width, float height) { obstacles.add(new GameObject(x, y, width, height, type)); }
+    @SimpleFunction(description = "Adds an obstacle such as tree, rock, cone, oil, water, fire, or pothole and redraws immediately.") public void CreateObstacle(String type, float x, float y, float width, float height) { obstacles.add(new GameObject(x, y, Math.max(24, width), Math.max(24, height), type)); view.invalidate(); }
     @SimpleFunction(description = "Spawns a built-in power up: Shield, Nitro, Double Coin, Repair, Slow Motion, Magnet, or Invincible.") public void SpawnPowerUp(String type, float x, float y) { obstacles.add(new GameObject(x, y, 58, 58, "PowerUp:" + type)); }
     @SimpleFunction(description = "Stores a sound asset path for Engine, Brake, Crash, Horn, Coin, Nitro, Victory, or Game Over.") public void SetSound(String name, String path) { String n = name == null ? "" : name.toLowerCase(); if (n.contains("engine")) engineSound = path; else if (n.contains("brake")) brakeSound = path; else if (n.contains("crash")) crashSound = path; else if (n.contains("horn")) hornSound = path; else if (n.contains("coin")) coinSound = path; else if (n.contains("nitro")) nitroSound = path; else if (n.contains("victory")) victorySound = path; else if (n.contains("over")) gameOverSound = path; }
     @SimpleFunction(description = "Configures simple car customization: tint, wheel size, and optional accessory images.") public void CustomizeCar(String tint, float wheelSizeValue, String wheelPath, String spoilerPath, String exhaustPath, String headlightPath) { carTint = tint; wheelSize = wheelSizeValue; wheelImage = wheelPath; spoilerImage = spoilerPath; exhaustImage = exhaustPath; headlightImage = headlightPath; }
@@ -165,7 +168,9 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Adds fuel up to 100.") public void AddFuel(int amount) { fuel = clamp(fuel + amount, 0, 100); }
     @SimpleFunction(description = "Enables or disables nitro.") public void EnableNitro(boolean enabled) { nitroEnabled = enabled; }
     @SimpleFunction(description = "Repairs health up to 100.") public void Repair(int amount) { health = clamp(health + amount, 0, 100); }
-    @SimpleFunction(description = "Applies damage and triggers crash events when needed.") public void Damage(int amount) { health = clamp(health - amount, 0, 100); if (health == 0) { CarCrash(); PlayerLose(); } }
+    @SimpleFunction(description = "Applies damage and triggers crash events when needed.") public void Damage(int amount) { health = clamp(health - amount, 0, 100); if (health == 0) { CarCrash(); PlayerLose(); } view.invalidate(); }
+    @SimpleFunction(description = "Forces a crash, applies damage, stops the vehicle briefly, and dispatches crash events. Use this block when custom logic decides the car crashed.") public void CrashCar(int damageAmount) { processCrash("manual", Math.max(0, damageAmount)); }
+    @SimpleFunction(description = "Returns true when the player car overlaps any opponent or damaging obstacle.") public boolean IsCarCrashed() { RectF car = rect(carX, carY, carWidth, carHeight); for (GameObject o : obstacles) if (isDamagingObstacle(o) && RectF.intersects(car, o.rect())) return true; for (GameObject o : opponents) if (RectF.intersects(car, o.rect())) return true; return false; }
     @SimpleFunction(description = "Returns score from coins, distance, speed, laps, and time.") public int GetScore() { return score; }
     @SimpleFunction(description = "Resets score, coins, timer, and distance-based progress.") public void ResetScore() { score = 0; coinsCollected = 0; raceStartMs = System.currentTimeMillis(); }
     @SimpleFunction(description = "Saves coins, high score, unlocks, settings, car name, theme, and road type.") public void Save() { saves.edit().putInt("coins", coinsCollected).putInt("score", score).putString("carName", carName).putString("theme", theme).putString("roadType", roadType).apply(); }
@@ -255,17 +260,14 @@ public class EasyRacerEngine extends AndroidViewComponent {
     }
     private void updateOpponent(GameObject o, float dy) {
         if (o.laneX <= 0) o.laneX = nearestLaneCenter(o.x, o.w);
-        o.y += dy + o.vy;
+        o.y += o.vy;
         float steer = o.laneX - o.x;
         o.x += Math.max(-2.8f, Math.min(2.8f, steer * 0.035f));
         float left = mainRoadLeft() + o.w / 2f + 10f;
         float right = mainRoadRight() - o.w / 2f - 10f;
         if (view.getWidth() > 0 && right > left) o.x = Math.max(left, Math.min(right, o.x));
-        if (view.getHeight() > 0 && o.y - o.h / 2f > view.getHeight() + 80f) {
-            o.y = randomSpawnY(o.h);
-            o.laneX = randomRoadX(o.w);
-            o.x = o.laneX;
-        }
+        if (view.getHeight() > 0 && o.vy > 0 && o.y - o.h / 2f > view.getHeight() + 80f) respawnOpponent(o, true);
+        else if (view.getHeight() > 0 && o.vy < 0 && o.y + o.h / 2f < -80f) respawnOpponent(o, false);
     }
     private void moveSideways(int dir) { float effectiveGrip = Math.max(0.1f, grip * roadGrip); angle = 0; carX += dir * steeringMoveDistance(effectiveGrip); if (effectiveGrip < 0.35f) carX += dir * Math.abs(speed) * 0.6f; }
     private float steeringMoveDistance(float effectiveGrip) { return Math.max(7f, Math.abs(speed) * 1.35f) * effectiveGrip; }
@@ -274,8 +276,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
         float left = mainRoadLeft(); float right = mainRoadRight();
         if (car.left < left || car.right > right) { WhenCarHitsWall(); Damage(5); speed *= -0.25f; carX = Math.max(left + carWidth/2, Math.min(right - carWidth/2, carX)); }
         for (int i = coins.size() - 1; i >= 0; i--) if (RectF.intersects(car, coins.get(i).rect())) { coins.remove(i); coinsCollected++; score += 100; WhenCarHitsCoin(); CoinCollected(100, coinsCollected); }
-        for (GameObject o : obstacles) if (RectF.intersects(car, o.rect())) { if (o.type.toLowerCase().contains("powerup")) { WhenCarHitsPowerup(o.type); applyPowerUp(o.type); } else if (o.type.toLowerCase().contains("oil") || o.type.toLowerCase().contains("water")) { WhenCarHitsPowerup(o.type); grip *= 0.7f; } else { WhenCarCrash(); CarCrash(); Damage(15); speed *= -0.4f; } }
-        for (GameObject o : opponents) if (RectF.intersects(car, o.rect())) { WhenCarCrash(); CarCrash(); Damage(20); speed *= -0.5f; }
+        for (int i = obstacles.size() - 1; i >= 0; i--) { GameObject o = obstacles.get(i); if (RectF.intersects(car, o.rect())) { if (o.type.toLowerCase().contains("powerup")) { WhenCarHitsPowerup(o.type); applyPowerUp(o.type); obstacles.remove(i); } else if (o.type.toLowerCase().contains("oil") || o.type.toLowerCase().contains("water")) { WhenCarHitsPowerup(o.type); grip *= 0.7f; obstacles.remove(i); } else { processCrash(o.type, 15); obstacles.remove(i); } } }
+        for (GameObject o : opponents) if (RectF.intersects(car, o.rect())) { processCrash(o.name == null || o.name.length() == 0 ? "opponent" : o.name, 20); respawnOpponent(o, o.vy >= 0); }
         for (int i = 0; i < checkpoints.size(); i++) if (RectF.intersects(car, checkpoints.get(i).rect())) { CheckpointReached(i + 1); if (i == checkpoints.size() - 1) { lap++; if (lap > maxLap) { PlayerWin(); FinishRace(); } } }
     }
     private float mainRoadLeft() { return view.getWidth() * 0.15f; }
@@ -294,7 +296,11 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private void setLandscapeMode(boolean enabled) { try { Activity a = (Activity) container.$context(); a.setRequestedOrientation(enabled ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED); } catch (Exception ignored) { } }
     private String cleanPlayer(String playerId) { return playerId == null || playerId.trim().length() == 0 ? "Player" : playerId.trim(); }
     private String cleanOpponentName(String name) { return name == null || name.trim().length() == 0 ? "Opponent" : name.trim(); }
-    private void addOpponent(String name, String imagePath, float x, float y, float width, float height) {
+    private void processCrash(String source, int damageAmount) { WhenCarCrash(); CarCrash(); Damage(damageAmount); speed *= -0.5f; float minY = carHeight / 2f; float maxY = view.getHeight() > 0 ? view.getHeight() - carHeight / 2f : Math.max(minY, carY); carY = Math.min(maxY, Math.max(minY, carY + (speed >= 0 ? 24f : -24f))); view.invalidate(); }
+    private boolean isDamagingObstacle(GameObject o) { String t = o.type == null ? "" : o.type.toLowerCase(); return !(t.contains("powerup") || t.contains("oil") || t.contains("water") || t.contains("coin") || t.contains("checkpoint")); }
+    private void addRandomOpponent(String name, String imagePath, float width, float height, boolean fromAbove) { addOpponent(name, imagePath, randomRoadX(width), fromAbove ? randomSpawnY(height) : randomSpawnBottomY(height), width, height, fromAbove); }
+    private void addOpponent(String name, String imagePath, float x, float y, float width, float height) { addOpponent(name, imagePath, x, y, width, height, y <= 0 || random.nextBoolean()); }
+    private void addOpponent(String name, String imagePath, float x, float y, float width, float height, boolean fromAbove) {
         String key = cleanOpponentName(name);
         String cleanedPath = cleanPath(imagePath);
         if (cleanedPath.length() > 0) opponentImagePaths.put(key, cleanedPath);
@@ -309,7 +315,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
         GameObject opponent = new GameObject(spawnX, spawnY, safeWidth, safeHeight, "opponent", key);
         opponent.needsLayoutPosition = !viewReady;
         opponent.imagePath = cleanedPath.length() > 0 ? cleanedPath : opponentImagePaths.containsKey(key) ? opponentImagePaths.get(key) : opponentImagePath;
-        opponent.vy = Math.max(1.5f, roadSpeed * 0.35f);
+        opponent.vy = (fromAbove ? 1f : -1f) * Math.max(2.5f, roadSpeed * 1.15f);
         opponent.laneX = nearestLaneCenter(spawnX, safeWidth);
         opponents.add(opponent);
         view.invalidate();
@@ -319,6 +325,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
             if (!opponent.needsLayoutPosition) continue;
             opponent.x = randomRoadX(opponent.w);
             opponent.y = Math.max(opponent.h / 2f + 12f, view.getHeight() * 0.25f);
+            opponent.vy = Math.max(2.5f, roadSpeed * 1.15f);
             opponent.laneX = nearestLaneCenter(opponent.x, opponent.w);
             opponent.needsLayoutPosition = false;
         }
@@ -343,6 +350,16 @@ public class EasyRacerEngine extends AndroidViewComponent {
         float h = view.getHeight() > 0 ? view.getHeight() : 720f;
         return -objectHeight / 2f - random.nextFloat() * Math.max(objectHeight, h * 0.65f);
     }
+    private float randomSpawnBottomY(float objectHeight) {
+        float h = view.getHeight() > 0 ? view.getHeight() : 720f;
+        return h + objectHeight / 2f + random.nextFloat() * Math.max(objectHeight, h * 0.65f);
+    }
+    private void respawnOpponent(GameObject o, boolean fromAbove) {
+        o.y = fromAbove ? randomSpawnY(o.h) : randomSpawnBottomY(o.h);
+        o.laneX = randomRoadX(o.w);
+        o.x = o.laneX;
+        o.vy = (fromAbove ? 1f : -1f) * Math.max(2.5f, roadSpeed * 1.15f);
+    }
     private float nearestLaneCenter(float x, float objectWidth) {
         int lanes = Math.max(1, roadLanes);
         float left = mainRoadLeft();
@@ -362,6 +379,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
         if (b == null && key.indexOf('/') < 0) b = decodeBitmap("file:///android_asset/" + key);
         if (b == null && key.indexOf('/') < 0) b = decodeBitmap("file:///android_asset/assets/" + key);
         if (b == null && key.indexOf('/') < 0) b = decodeBitmap("assets/" + key);
+        if (b == null && key.indexOf('/') < 0) b = decodeBitmap("images/" + key);
         if (b == null) b = decodeBitmap(new File(key).getName());
         if (b != null) imageCache.put(key, b);
         return b;
@@ -419,10 +437,12 @@ public class EasyRacerEngine extends AndroidViewComponent {
         private int roadColor() { String t = roadSurface == null ? "" : roadSurface.toLowerCase(); if (t.contains("sand")) return Color.rgb(166, 128, 72); if (t.contains("ice")) return Color.rgb(134, 174, 190); if (t.contains("dirt")) return Color.rgb(92, 66, 45); return Color.rgb(54, 57, 62); }
         private int sideColor() { String t = roadSideStyle == null ? "" : roadSideStyle.toLowerCase(); if (t.contains("desert") || t.contains("beach")) return Color.rgb(190, 152, 88); if (t.contains("snow")) return Color.rgb(210, 225, 230); if (t.contains("forest") || t.contains("mountain")) return Color.rgb(27, 75, 42); if (t.contains("cyber")) return Color.rgb(34, 20, 55); return Color.rgb(31, 78, 56); }
         private void drawVehicle(Canvas c) { Bitmap b = bikeMode ? bikeBitmap : carBitmap; if (b == null) { b = bikeMode ? load(bikeImagePath) : load(carImagePath); if (bikeMode) bikeBitmap = b; else carBitmap = b; } RectF dst = rect(carX, carY, carWidth, carHeight); c.save(); c.rotate(angle, carX, carY); if (b != null) c.drawBitmap(b, null, dst, p); else { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(dst.left+8,dst.bottom-18,dst.right-8,dst.bottom+10),p); p.setColor(bikeMode ? Color.CYAN : Color.rgb(22, 190, 96)); c.drawRoundRect(dst, 18, 18, p); p.setColor(Color.rgb(160, 230, 255)); c.drawRoundRect(new RectF(dst.left+18,dst.top+24,dst.right-18,dst.top+62),10,10,p); p.setColor(Color.BLACK); c.drawRect(dst.left-8,dst.top+28,dst.left+8,dst.top+58,p); c.drawRect(dst.right-8,dst.top+28,dst.right+8,dst.top+58,p); c.drawRect(dst.left-8,dst.bottom-58,dst.left+8,dst.bottom-28,p); c.drawRect(dst.right-8,dst.bottom-58,dst.right+8,dst.bottom-28,p); } c.restore(); }
-        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); boolean isOpponent = o.type != null && o.type.toLowerCase().contains("opponent"); Bitmap drawBitmap = isOpponent ? resolveOpponentBitmap(o, b) : b; if (drawBitmap != null) { p.setStyle(Paint.Style.FILL); p.setAlpha(255); c.drawBitmap(drawBitmap, null, r, p); p.setAlpha(255); if (isOpponent) drawOpponentOutline(c, r); } else if (isOpponent) { drawOpponentFallback(c, r); } else { p.setStyle(Paint.Style.FILL); p.setColor(color); c.drawRoundRect(r, 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } } }
+        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); boolean isOpponent = o.type != null && o.type.toLowerCase().contains("opponent"); Bitmap drawBitmap = isOpponent ? resolveOpponentBitmap(o, b) : resolveObjectBitmap(o, b); if (drawBitmap != null) { p.setStyle(Paint.Style.FILL); p.setAlpha(255); if (isOpponent && o.vy > 0) { c.save(); c.scale(1f, -1f, r.centerX(), r.centerY()); c.drawBitmap(drawBitmap, null, r, p); c.restore(); } else c.drawBitmap(drawBitmap, null, r, p); p.setAlpha(255); if (isOpponent) drawOpponentOutline(c, r); } else if (isOpponent) { if (o.vy > 0) { c.save(); c.scale(1f, -1f, r.centerX(), r.centerY()); drawOpponentFallback(c, r); c.restore(); } else drawOpponentFallback(c, r); } else drawFallbackObject(c, o, r, color); } }
+        private Bitmap resolveObjectBitmap(GameObject o, Bitmap defaultBitmap) { String t = o.type == null ? "" : o.type.toLowerCase(); if (t.contains("coin")) { if (coinBitmap == null) coinBitmap = load("coin.png"); return coinBitmap; } if (t.contains("cone")) { if (coneBitmap == null) coneBitmap = load("cone.png"); return coneBitmap; } return defaultBitmap; }
         private Bitmap resolveOpponentBitmap(GameObject o, Bitmap defaultBitmap) { String key = cleanOpponentName(o.name); Bitmap drawBitmap = opponentImages.get(key); if (drawBitmap == null && o.imagePath != null && o.imagePath.length() > 0) { drawBitmap = load(o.imagePath); if (drawBitmap != null) opponentImages.put(key, drawBitmap); } if (drawBitmap == null && opponentImagePaths.containsKey(key)) { drawBitmap = load(opponentImagePaths.get(key)); if (drawBitmap != null) opponentImages.put(key, drawBitmap); } if (drawBitmap == null) drawBitmap = defaultBitmap; if (drawBitmap == null && opponentImagePath.length() > 0) { drawBitmap = load(opponentImagePath); if (drawBitmap != null) { opponentBitmap = drawBitmap; opponentImages.put(cleanOpponentName("Opponent"), drawBitmap); } } return drawBitmap; }
         private void drawOpponentOutline(Canvas c, RectF r) { p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(4); p.setColor(Color.argb(210, 255, 80, 90)); c.drawRoundRect(r, 16, 16, p); p.setStyle(Paint.Style.FILL); }
         private void drawOpponentFallback(Canvas c, RectF r) { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(r.left+8,r.bottom-18,r.right-8,r.bottom+10),p); p.setColor(Color.rgb(210, 56, 64)); c.drawRoundRect(r, 18, 18, p); p.setColor(Color.rgb(255, 210, 120)); c.drawRoundRect(new RectF(r.left+18, r.top+24, r.right-18, r.top+62), 10, 10, p); p.setColor(Color.rgb(75, 14, 20)); c.drawRoundRect(new RectF(r.left+18, r.bottom-66, r.right-18, r.bottom-24), 10, 10, p); p.setColor(Color.BLACK); c.drawRect(r.left-8, r.top+28, r.left+8, r.top+58, p); c.drawRect(r.right-8, r.top+28, r.right+8, r.top+58, p); c.drawRect(r.left-8, r.bottom-58, r.left+8, r.bottom-28, p); c.drawRect(r.right-8, r.bottom-58, r.right+8, r.bottom-28, p); }
+        private void drawFallbackObject(Canvas c, GameObject o, RectF r, int color) { String t = o.type == null ? "" : o.type.toLowerCase(); p.setStyle(Paint.Style.FILL); if (t.contains("coin")) { p.setColor(Color.rgb(255, 199, 35)); c.drawOval(r, p); p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(5); p.setColor(Color.rgb(255, 245, 145)); c.drawOval(new RectF(r.left+8, r.top+8, r.right-8, r.bottom-8), p); p.setStyle(Paint.Style.FILL); p.setTextAlign(Paint.Align.CENTER); p.setTextSize(Math.max(18, r.height() * 0.45f)); c.drawText("$", r.centerX(), r.centerY() + r.height() * 0.17f, p); p.setTextAlign(Paint.Align.LEFT); } else if (t.contains("cone")) { p.setColor(Color.rgb(255, 122, 26)); float[] pts = new float[] { r.centerX(), r.top, r.right, r.bottom, r.left, r.bottom }; c.drawPath(new android.graphics.Path() {{ moveTo(pts[0], pts[1]); lineTo(pts[2], pts[3]); lineTo(pts[4], pts[5]); close(); }}, p); p.setColor(Color.WHITE); c.drawRect(r.left + r.width()*0.22f, r.top + r.height()*0.55f, r.right - r.width()*0.22f, r.top + r.height()*0.7f, p); } else { p.setColor(color); c.drawRoundRect(r, 12, 12, p); p.setColor(Color.argb(80,255,255,255)); c.drawCircle(o.x, o.y - o.h/4, Math.max(6, o.w/5), p); } p.setStyle(Paint.Style.FILL); }
         private void drawHud(Canvas c) { p.setTextSize(20); p.setColor(Color.argb(128,0,0,0)); c.drawRoundRect(new RectF(16, 16, 250, 150), 18, 18, p); p.setColor(Color.WHITE); c.drawText("Speed " + (int)Math.abs(speed * 10), 32, 50, p); c.drawText("Score " + score, 32, 84, p); c.drawText("Lap " + lap + "/" + maxLap, 32, 118, p); c.drawText("Health " + health, 32, 140, p); if (fuelEnabled) c.drawText("Fuel " + fuel, 32, 166, p); if (nitroEnabled) c.drawText("Nitro " + nitro, 32, 192, p); }
         private void drawControls(Canvas c) { float h = getHeight(), w = getWidth(); leftButton.set(22, h-132, 142, h-24);
             rightButton.set(w-142, h-132, w-22, h-24);

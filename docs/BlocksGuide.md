@@ -191,7 +191,8 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SetOpponentImage(path)` | `path`: image location text, for example `opponent.png`. | Sets the default opponent image and redraws the game immediately. |
 | `SetOpponentVehicle(name, imagePath)` / `SetOpponentVehicleImage(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename or path. | Registers a named opponent car or bike image that can be reused for multiple opponents. |
 | `SetOpponentCarImage(path)` / `OpponentCarImage` property | `path`: image location text. | Sets the default opponent car image; use this when your project has the `opponentCarImage` property block. |
-| `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. |
+| `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. The engine also tries bundled `coin.png`/`images/coin.png` before drawing a built-in coin fallback. |
+| `SetConeImage(path)` | `path`: image location text, for example `cone.png`. | Sets the image used when `CreateObstacle` type contains `cone`; otherwise a built-in cone fallback is drawn. |
 | `SetRoadImage(path)` | `path`: image location text. | Replaces the generated middle road with a scrolling road image. |
 | `SetLeftRoadImage(path)` | `path`: image location text. | Sets the scrolling image for the left 15% roadside area. |
 | `SetRightRoadImage(path)` | `path`: image location text. | Sets the scrolling image for the right 15% roadside area. |
@@ -203,6 +204,8 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | Block | Parameters | What it does |
 | --- | --- | --- |
 | `CreateOpponent(x, y)` | `x`: horizontal center position; `y`: vertical center position. | Spawns an AI opponent car at the given screen position and redraws immediately. |
+| `AddOpponents(count)` | `count`: number of default opponent cars to add. | Adds many opponents at once, spread across lanes, alternating cars coming from above and below. Cars coming from above are drawn vertically flipped. |
+| `AddOpponentVehicles(name, imagePath, count)` | `name`: opponent vehicle name; `imagePath`: optional uploaded filename/path; `count`: number to add. | Adds many named opponent cars or bikes at once with the same alternating two-direction traffic behavior. |
 | `CreateOpponentVehicle(name, imagePath, x, y)` | `name`: opponent vehicle name; `imagePath`: optional uploaded filename/path; `x`, `y`: center position. | Spawns a named opponent car or bike with its own image, allowing multiple opponent vehicles on the road. |
 | `CreateOpponentVehicleWithSize(name, imagePath, x, y, width, height)` | Same as above plus custom width and height. | Spawns the whole named opponent vehicle at the requested size. |
 | `SpawnRandomOpponent(name)` | `name`: registered opponent vehicle name. | Places the named opponent at a random valid road position above the screen so it moves into view. |
@@ -239,6 +242,8 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `EnableNitro(enabled)` | `enabled`: true/false. | Turns nitro boosting on or off. |
 | `Repair(amount)` | `amount`: health points to add. | Repairs health up to the maximum of 100. |
 | `Damage(amount)` | `amount`: health points to remove. | Reduces health and triggers lose/crash events if health reaches zero. |
+| `CrashCar(damageAmount)` | `damageAmount`: health points to remove. | Forces a crash from blocks, dispatches crash events, applies damage, and bounces the vehicle. |
+| `IsCarCrashed()` | None. | Returns true when the car currently overlaps an opponent or damaging obstacle. |
 
 ### Template, theme, and multiplayer blocks
 
