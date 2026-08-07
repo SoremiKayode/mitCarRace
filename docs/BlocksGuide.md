@@ -108,7 +108,7 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 
 ## Image blocks: using uploaded App Inventor assets
 
-For `SetCarImage`, `SetOpponentImage` / `SetOpponentCarImage`, `SetCoinImage`, `SetBikeImage`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage` / `SetLeftArrowButtonImage`, and `SetRightNavigationButtonImage` / `SetRightArrowButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
+For `SetCarImage`, `SetOpponentImage` / `SetOpponentCarImage`, `SetCoinImage`, `SetConeImage`, `SetRoadblockImage`, `SetBikeImage`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage` / `SetLeftArrowButtonImage`, and `SetRightNavigationButtonImage` / `SetRightArrowButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
 
 Recommended order:
 
@@ -135,6 +135,92 @@ Do not use the Image component itself as the value. Use the image asset's filena
 - Use `Highway` for fast endless games and `Track` for lap-based racing.
 - Keep obstacle sizes larger than `40x40` pixels so touch-screen players can recognize them quickly.
 
+
+## Complete racing game recipe: main car, opponents, coins, roadblocks, and crashes
+
+Use this checklist when you want a complete beginner car-racing game instead of only testing one block at a time. The examples use the bundled sample filenames in this repository (`mycar.png`, `opponentcar.png`, `coin.png`, `road.png`, and `cone.png`), but in MIT App Inventor you should upload your own files to the **Media** panel and type the exact filenames.
+
+### Step 1: Prepare the screen and game surface
+
+1. Set `Screen1.ScreenOrientation` to landscape, or call `SetLandscapeMode(true)` in `Screen1.Initialize`.
+2. Drag `EasyRacerEngine` onto the screen. If you want the game inside a layout, add an arrangement and call `AddToArrangement(GameArrangement)`.
+3. Optional but recommended: add labels for score, coins, health, and game messages, plus buttons for Restart, Pause, and Nitro if you do not want to use the built-in overlay controls.
+
+### Step 2: Upload and assign images
+
+Call the image setters before creating objects so the first frame already looks like your game:
+
+1. `SetRoadImage("road.png")` for the scrolling road.
+2. `SetCarImage("mycar.png")` for the player's main car.
+3. `SetOpponentImage("opponentcar.png")` for the default opponent car.
+4. `SetCoinImage("coin.png")` for collectible coins.
+5. `SetConeImage("cone.png")` for cone obstacles.
+6. `SetRoadblockImage("roadblock.png")` if you upload a roadblock, barrier, barricade, or block image; otherwise the extension draws a red-and-white roadblock fallback automatically.
+
+### Step 3: Build the road and player car
+
+In `Screen1.Initialize`, use one preset road or one custom road, then create the player:
+
+1. Easy preset: `CreateRoadTypeBlock("Highway")`.
+2. Custom preset: `ConfigureRoadBlock("Highway", 4, "Asphalt", "Dashed", "City", 1.0, 0.04, 8, 720, "Normal")`.
+3. Set optional racing rules: `MaximumSpeed` to `18`, `TurningSpeed` to `6`, `MaximumLap` to `3`, `EnableFuel(true)`, and `EnableNitro(true)`.
+4. Call `CreateCar()`.
+
+### Step 4: Add opponent cars
+
+Choose one of these approaches:
+
+1. Simple traffic: call `AddOpponents(3)` after `SetOpponentImage`. The engine spreads cars across lanes and moves them automatically.
+2. One exact opponent: call `CreateOpponent(420, 120)` to place an opponent at a chosen screen position.
+3. Different opponent types: call `SetOpponentVehicle("Truck", "truck.png")`, then `SpawnRandomOpponent("Truck")` or `CreateOpponentVehicleWithSize("Truck", "truck.png", 520, -160, 150, 230)`.
+
+Opponents are damaging by default. When the main car overlaps an opponent, the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns the opponent.
+
+### Step 5: Add coins
+
+Use `SpawnCoin(x, y)` to put coins in safe lane positions. For example:
+
+1. `SpawnCoin(320, -120)`
+2. `SpawnCoin(480, -360)`
+3. `SpawnCoin(640, -620)`
+
+When the player touches a coin, the extension removes it, adds `100` score, increases total coins, and dispatches `WhenCarHitsCoin` and `CoinCollected(value, totalCoins)`. In `CoinCollected`, update your coin label and optionally spawn another coin above the screen.
+
+### Step 6: Add roadblocks and other obstacles
+
+Use `CreateObstacle(type, x, y, width, height)`. Damaging obstacle types include `roadblock`, `barrier`, `barricade`, `block`, `cone`, `tree`, `rock`, `fire`, and `pothole`. Grip hazards include `oil` and `water`; they reduce grip instead of causing a normal crash.
+
+Recommended examples:
+
+1. `CreateObstacle("roadblock", 520, -220, 150, 70)` for a wide barrier.
+2. `CreateObstacle("cone", 360, -460, 62, 82)` for a cone.
+3. `CreateObstacle("oil", 610, -720, 110, 62)` for a slippery hazard.
+
+### Step 7: Start, steer, and restart the race
+
+1. Start with the built-in on-screen Start button, or call `StartRace()` from your own Start button.
+2. The built-in left/right buttons steer the main car. You can also call `TurnLeft()` and `TurnRight()` from your own controls.
+3. If you use an `AccelerometerSensor`, call `EnableAccelerometerNavigation(true, 1.2, 0.8)` once, then call `NavigateWithAccelerometer(xAccel, yAccel, zAccel)` inside the sensor's `AccelerationChanged` event.
+4. For a one-hit game over, call `EnableGameOverOnCrash(true)` before `StartRace()`.
+5. For restart, call `StopRace()`, `ResetScore()`, `ResetCar()`, add fresh opponents/coins/obstacles, then call `StartRace()`.
+
+### Step 8: Detect crashes and decide what happens
+
+The engine already checks collisions every frame after `StartRace()`. Use these event blocks for game logic:
+
+1. `EnableGameOverOnCrash(true)`: turns every crash into an immediate `PlayerLose` + `FinishRace()` game over. Use this for classic one-hit racing games.
+2. `WhenCarCrash` or `CarCrash`: play a crash sound, show "Crash!", update a health label with `Health`, call `Respawn()`, or manually call `FinishRace()` if you want custom game-over logic.
+3. `WhenCarHitsWall`: warn the player or reduce score when the car leaves the road.
+4. `PlayerLose`: show a game-over screen when health reaches `0` or when one-hit game-over mode is enabled.
+5. `IsCarCrashed()`: use this boolean in custom clock logic if you want to check collision state yourself.
+6. `CrashCar(damageAmount)`: force a crash from your own rules, such as touching a custom App Inventor sprite.
+
+### Step 9: Finish the game
+
+1. Use checkpoints and laps for a race: create checkpoints with `CreateCheckpoint`, set `MaximumLap`, and handle `PlayerWin`.
+2. Use endless mode for survival: keep spawning coins, opponents, and obstacles above the screen after each event.
+3. In `RaceFinished(finalScore)`, show the final score. The extension stores the score automatically, so you can use `RetrieveHighScore()` for a high-score screen.
+
 ## 10. Complete block reference
 
 This section lists each visible EasyRacer block, what it does, and the parameters it needs. In MIT App Inventor, use text blocks for `String` values, number blocks for `int`/`float` values, and true/false blocks for `boolean` values.
@@ -160,6 +246,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `PlayRace()` | None. | Resumes a paused race and triggers `RaceResumed`. |
 | `FinishRace()` | None. | Ends the race, stores the score for the current player, and triggers `RaceFinished(finalScore)`. |
 | `StopRace()` | None. | Ends the current run without saving a finish score and shows the Start button again. |
+| `EnableGameOverOnCrash(enabled)` | `enabled`: true/false. | When true, any crash with an opponent, wall, roadblock, cone, or damaging obstacle immediately triggers `PlayerLose` and `FinishRace()`. |
 
 ### Driving and control blocks
 
@@ -193,6 +280,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SetOpponentCarImage(path)` / `OpponentCarImage` property | `path`: image location text. | Sets the default opponent car image; use this when your project has the `opponentCarImage` property block. |
 | `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. The engine also tries bundled `coin.png`/`images/coin.png` before drawing a built-in coin fallback. |
 | `SetConeImage(path)` | `path`: image location text, for example `cone.png`. | Sets the image used when `CreateObstacle` type contains `cone`; otherwise a built-in cone fallback is drawn. |
+| `SetRoadblockImage(path)` | `path`: image location text, for example `roadblock.png`. | Sets the image used when `CreateObstacle` type contains `roadblock`, `barrier`, `barricade`, or `block`; otherwise a built-in red-and-white fallback is drawn. |
 | `SetRoadImage(path)` | `path`: image location text. | Replaces the generated middle road with a scrolling road image. |
 | `SetLeftRoadImage(path)` | `path`: image location text. | Sets the scrolling image for the left 15% roadside area. |
 | `SetRightRoadImage(path)` | `path`: image location text. | Sets the scrolling image for the right 15% roadside area. |
@@ -212,7 +300,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SpawnRandomOpponentVehicle(name, imagePath)` / `SpawnRandomOpponentCar(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename/path. | Registers/uses the image and places the whole opponent car or bike randomly on the road. |
 | `SpawnCoin(x, y)` | `x`: horizontal center position; `y`: vertical center position. | Adds a collectible coin at the given screen position. |
 | `CreateCheckpoint(x, y, width, height)` | `x`, `y`: center position; `width`, `height`: checkpoint rectangle size. | Adds a checkpoint area that triggers `CheckpointReached(index)` when touched. |
-| `CreateObstacle(type, x, y, width, height)` | `type`: text such as `tree`, `rock`, `cone`, `oil`, `water`, `fire`, or `pothole`; `x`, `y`, `width`, `height`: obstacle rectangle. | Adds a damaging obstacle or grip-changing hazard. |
+| `CreateObstacle(type, x, y, width, height)` | `type`: text such as `roadblock`, `barrier`, `tree`, `rock`, `cone`, `oil`, `water`, `fire`, or `pothole`; `x`, `y`, `width`, `height`: obstacle rectangle. | Adds a damaging obstacle or grip-changing hazard. |
 | `SpawnPowerUp(type, x, y)` | `type`: `Shield`, `Nitro`, `Double Coin`, `Repair`, `Slow Motion`, `Magnet`, or `Invincible`; `x`, `y`: center position. | Adds a built-in power-up object. |
 
 ### Score, save, and sidebar blocks
@@ -242,7 +330,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `EnableNitro(enabled)` | `enabled`: true/false. | Turns nitro boosting on or off. |
 | `Repair(amount)` | `amount`: health points to add. | Repairs health up to the maximum of 100. |
 | `Damage(amount)` | `amount`: health points to remove. | Reduces health and triggers lose/crash events if health reaches zero. |
-| `CrashCar(damageAmount)` | `damageAmount`: health points to remove. | Forces a crash from blocks, dispatches crash events, applies damage, and bounces the vehicle. |
+| `CrashCar(damageAmount)` | `damageAmount`: health points to remove. | Forces a crash from blocks, dispatches crash events, applies damage, and ends the game if `EnableGameOverOnCrash(true)` is active. |
 | `IsCarCrashed()` | None. | Returns true when the car currently overlaps an opponent or damaging obstacle. |
 
 ### Template, theme, and multiplayer blocks
@@ -274,6 +362,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `RoadSpeed` | Number. | Controls automatic road scrolling speed. |
 | `AutoScroll` | Boolean. | Enables or disables automatic road/object scrolling. |
 | `InfiniteMode` | Boolean. | Keeps the car clamped inside the visible play area. |
+| `GameOverOnCrash` | Boolean. | Property version of `EnableGameOverOnCrash`; true makes crashes immediately trigger `PlayerLose` and `FinishRace()`. |
 | `ScrollDirection` | Text. | Stores scroll direction text for your project logic. |
 | `FuelLevel` | Read-only. | Returns current fuel. |
 | `NitroAmount` | Read-only. | Returns current nitro. |
@@ -312,5 +401,5 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `WhenCarCrash` | None. | When the car hits an obstacle or opponent. |
 | `CarCrash` | None. | When a crash is processed. |
 | `PlayerWin` | None. | When the player completes the required laps. |
-| `PlayerLose` | None. | When health reaches zero. |
+| `PlayerLose` | None. | When health reaches zero or `EnableGameOverOnCrash(true)` ends the race after a crash. |
 | `TimeFinished` | None. | When the countdown timer reaches its limit. |
