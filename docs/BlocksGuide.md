@@ -98,7 +98,7 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 
 1. Add the extension to a landscape screen.
 2. Call `AddToArrangement` if you want it inside an arrangement.
-3. Call `SetCarImage` and optionally `SetRoadImage`, `SetLeftRoadImage`, and `SetRightRoadImage`. The main road image is centered and uses 70% of the game width; left and right side road images use 15% each. If `SetRoadImage` is set, the generated road artwork is hidden.
+3. Call `SetCarImage` or `SetCarImageWithDirection` and optionally `SetRoadImage`, `SetLeftRoadImage`, and `SetRightRoadImage`. The main road image is centered and uses 70% of the game width; left and right side road images use 15% each. If `SetRoadImage` is set, the generated road artwork is hidden.
 4. Call `CreateRoadTypeBlock("Highway")` or use `ConfigureRoadBlock` for custom physics.
 5. Call `CreateCar()`.
 6. Let the player press the on-screen **START** button or call `StartRace()` from your own button.
@@ -108,15 +108,27 @@ Open or close the sidebar overlay. The sidebar displays current score, saved sco
 
 ## Image blocks: using uploaded App Inventor assets
 
-For `SetCarImage`, `SetOpponentImage` / `SetOpponentCarImage`, `SetCoinImage`, `SetConeImage`, `SetRoadblockImage`, `SetBikeImage`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage` / `SetLeftArrowButtonImage`, and `SetRightNavigationButtonImage` / `SetRightArrowButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
+For `SetCarImage`, `SetCarImageWithDirection`, `SetOpponentImage` / `SetOpponentImageWithDirection` / `SetOpponentCarImage`, `SetOpponentVehicleWithDirection`, `SetCoinImage`, `SetConeImage`, `SetRoadblockImage`, `SetBikeImage`, `SetBikeImageWithDirection`, `SetRoadImage`, `SetLeftRoadImage`, `SetRightRoadImage`, `SetLeftNavigationButtonImage` / `SetLeftArrowButtonImage`, and `SetRightNavigationButtonImage` / `SetRightArrowButtonImage`, first upload the image file in MIT App Inventor's **Media** panel. Then pass the exact uploaded filename as a text value, for example `icon.png`, `car.png`, `coin.png`, or `opponent.png`.
 
 Recommended order:
 
 1. Upload the PNG/JPG/WEBP file to **Media**.
 2. In blocks, use a text block containing only the filename, such as `icon.png`.
-3. Call the image setter before creating or spawning that object. For example, call `SetCarImage("car.png")` before `CreateCar()`, call `SetOpponentImage("opponent.png")` before `CreateOpponent(...)`, and call `SetCoinImage("coin.png")` before `SpawnCoin(...)`.
+3. Call the image setter before creating or spawning that object. For example, call `SetCarImageWithDirection("car.png", "Up")` before `CreateCar()`, call `SetOpponentImageWithDirection("opponent.png", "Down")` before `CreateOpponent(...)` if the uploaded opponent image originally points down, and call `SetCoinImage("coin.png")` before `SpawnCoin(...)`.
 
 Do not use the Image component itself as the value. Use the image asset's filename text. Filenames are case-sensitive on Android, so `Icon.png` and `icon.png` are different names.
+
+
+### Image original direction helpers
+
+Use these helpers when an uploaded vehicle picture was drawn facing a direction other than up. The engine then rotates the bitmap to match its movement direction, preventing cars from appearing to drive in reverse. Direction inputs accept `Up`, `Down`, `Left`, `Right`, or degree values such as `0`, `90`, `180`, and `270`.
+
+- `SetCarImageWithDirection(path, originalDirection)` sets the player car image and original facing direction in one block.
+- `SetCarImageOriginalDirection(originalDirection)` changes only the player car image's original facing direction.
+- `SetBikeImageWithDirection(path, originalDirection)` sets the player bike image and original facing direction in one block.
+- `SetOpponentImageWithDirection(path, originalDirection)` sets the default opponent image and original facing direction in one block.
+- `SetOpponentImageOriginalDirection(originalDirection)` changes only the default opponent image's original facing direction.
+- `SetOpponentVehicleWithDirection(name, imagePath, originalDirection)` assigns a named opponent image and its original facing direction.
 
 ## 8. Events to use
 
@@ -175,7 +187,7 @@ Choose one of these approaches:
 3. Different opponent types: call `SetOpponentVehicle("Truck", "truck.png")`, then `SpawnRandomOpponent("Truck")` or `CreateOpponentVehicleWithSize("Truck", "truck.png", 520, -160, 150, 230)`.
 4. Numbered opponent images: call `SetOpponentImageByNumber(1, "truck.png")`, `SetOpponentImageByNumber(2, "taxi.png")`, and so on. The number starts at 1 and matches the order created by `AddOpponents`, so each opponent can have its own image.
 
-Opponents avoid overlapping each other while they drive. Each opponent prefers to stay in one lane and only seldom transitions to another lane when that lane is blocked. The traffic lane planner also prevents a lane from mixing cars coming from above with cars coming from below. Opponent-to-opponent contact is separated automatically and never triggers game-over or crash events. Opponents are damaging only when they overlap the main car: the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns that opponent.
+Opponents avoid overlapping each other while they drive. Each opponent prefers to stay in one lane and only seldom transitions to another lane when that lane is blocked. Every few respawns, one opponent is forced into the player's current lane as a head-on challenge, while nearby left and right escape lanes are cleared so the player still has a fair way out. The traffic lane planner also prevents a lane from mixing cars coming from above with cars coming from below when it is not creating that deliberate head-on challenge. Opponent-to-opponent contact is separated automatically and never triggers game-over or crash events. Opponents are damaging only when they overlap the main car: the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns that opponent.
 
 ### Step 5: Add coins
 
