@@ -61,7 +61,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     private boolean accelerometerEnabled = false;
     private float accelerometerSensitivity = 1.2f, accelerometerDeadZone = 0.8f;
     private boolean scoreSidebarOpen = false;
-    private float carX = 300, carY = 650, carWidth = 120, carHeight = 190, angle = 0;
+    private float carX = 300, carY = 650, carWidth = 120, carHeight = 190, angle = 0, carDirection = 0, opponentDirection = 180;
     private float speed = 0, acceleration = 0.35f, brakeStrength = 0.65f, maxSpeed = 18f, turnSpeed = 4f;
     private float weight = 1f, grip = 0.85f, friction = 0.04f, roadGrip = 1f, speedMultiplier = 1f;
     private float roadWidth = 720, roadHeight = 1280, roadSpeed = 6f, roadOffset = 0;
@@ -101,7 +101,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleFunction(description = "Creates the player car using current car properties.") public void CreateCar() { bikeMode = false; ResetCar(); }
     @SimpleFunction(description = "Creates the player bike using the same engine and bike image.") public void CreateBike() { bikeMode = true; ResetCar(); }
     @SimpleFunction(description = "Deletes the current player vehicle from the race.") public void DeleteCar() { raceRunning = false; speed = 0; view.invalidate(); }
-    @SimpleFunction(description = "Resets vehicle position, speed, health, fuel, nitro, and lap.") public void ResetCar() { carX = Math.max(80, view.getWidth() / 2f); carY = Math.max(180, view.getHeight() - 220); speed = 0; angle = 0; health = 100; fuel = 100; nitro = 100; lap = 1; view.invalidate(); }
+    @SimpleFunction(description = "Resets vehicle position, speed, health, fuel, nitro, and lap.") public void ResetCar() { carX = Math.max(80, view.getWidth() / 2f); carY = Math.max(180, view.getHeight() - 220); speed = 0; angle = carDirection; health = 100; fuel = 100; nitro = 100; lap = 1; view.invalidate(); }
     @SimpleFunction(description = "Respawns the vehicle after a crash.") public void Respawn() { speed = 0; health = Math.max(1, health); carX = view.getWidth() / 2f; carY = view.getHeight() - 220; CarStopped(); view.invalidate(); }
     @SimpleFunction(description = "Starts the game from the on-screen Start button or a block. This hides Start, resets the race timer, and begins physics, scoring, AI, collisions, and HUD updates.") public void StartRace() { if (!raceRunning) { gameStarted = true; raceRunning = true; raceStartMs = System.currentTimeMillis(); RaceStarted(); handler.post(loop); view.invalidate(); } }
     @SimpleFunction(description = "Pauses the game and shows the on-screen Play button so the race can resume without resetting score, vehicle, or timer.") public void PauseRace() { raceRunning = false; leftPressed = false; rightPressed = false; view.invalidate(); }
@@ -124,10 +124,12 @@ public class EasyRacerEngine extends AndroidViewComponent {
 
     @SimpleFunction(description = "Accelerates the vehicle. Use with a button or clock for manual control.") public void Accelerate() { if (fuelEnabled && fuel <= 0) { FuelEmpty(); return; } speed = Math.min(maxSpeed * speedMultiplier, speed + acceleration / Math.max(0.2f, weight)); CarMoving(); }
     @SimpleFunction(description = "Brakes the vehicle and supports reverse at low speed.") public void Brake() { speed = Math.max(-maxSpeed * 0.35f, speed - brakeStrength); }
-    @SimpleFunction(description = "Moves the car left without rotating it, keeping the car facing forward.") public void TurnLeft() { MoveLeft(); }
-    @SimpleFunction(description = "Moves the car right without rotating it, keeping the car facing forward.") public void TurnRight() { MoveRight(); }
-    @SimpleFunction(description = "Moves the car left without rotating it, keeping the car facing forward. This only moves while the race is actively playing.") public void MoveLeft() { if (!raceRunning) return; moveSideways(-1); }
-    @SimpleFunction(description = "Moves the car right without rotating it, keeping the car facing forward. This only moves while the race is actively playing.") public void MoveRight() { if (!raceRunning) return; moveSideways(1); }
+    @SimpleFunction(description = "Moves the car left on its current lane direction; use SetCarDirection to rotate the main car image.") public void TurnLeft() { MoveLeft(); }
+    @SimpleFunction(description = "Moves the car right on its current lane direction; use SetCarDirection to rotate the main car image.") public void TurnRight() { MoveRight(); }
+    @SimpleFunction(description = "Moves the car left while keeping it in the road lane area. This only moves while the race is actively playing.") public void MoveLeft() { if (!raceRunning) return; moveSideways(-1); }
+    @SimpleFunction(description = "Moves the car right while keeping it in the road lane area. This only moves while the race is actively playing.") public void MoveRight() { if (!raceRunning) return; moveSideways(1); }
+    @SimpleFunction(description = "Sets the main car image rotation in degrees. Use 0 for facing up, 90 for right, 180 for down, and 270 for left.") public void SetCarDirection(float degrees) { CarDirection(degrees); }
+    @SimpleFunction(description = "Sets the default opponent car image rotation in degrees before automatic above/below lane flipping is applied. Use 0 for facing up, 90 for right, 180 for down, and 270 for left.") public void SetOpponentDirection(float degrees) { OpponentDirection(degrees); }
     @SimpleFunction(description = "Uses nitro boost if enabled and available.") public void UseNitro() { if (nitroEnabled && nitro > 0) { nitro = Math.max(0, nitro - 8); speed = Math.min(maxSpeed * 1.7f, speed + 5); NitroStarted(); if (nitro == 0) NitroEnded(); } }
 
     @SimpleFunction(description = "Sets player car image from an uploaded App Inventor asset filename, asset path, URL, or file path. Example: icon.png") public void SetCarImage(String path) { carImagePath = cleanPath(path); carBitmap = load(carImagePath); view.invalidate(); }
@@ -185,8 +187,10 @@ public class EasyRacerEngine extends AndroidViewComponent {
     @SimpleProperty public float CarSpeed() { return speed; } @SimpleProperty public void CarSpeed(float v) { speed = v; }
     @SimpleProperty public float Acceleration() { return acceleration; } @SimpleProperty public void Acceleration(float v) { acceleration = v; }
     @SimpleProperty public float BrakeStrength() { return brakeStrength; } @SimpleProperty public void BrakeStrength(float v) { brakeStrength = v; }
-    @SimpleProperty public float MaximumSpeed() { return maxSpeed; } @SimpleProperty public void MaximumSpeed(float v) { maxSpeed = v; }
-    @SimpleProperty public float TurningSpeed() { return turnSpeed; } @SimpleProperty public void TurningSpeed(float v) { turnSpeed = v; }
+    @SimpleProperty(description = "Gets the maximum forward speed. Default is 18; the minimum useful value is 0.") public float MaximumSpeed() { return maxSpeed; } @SimpleProperty(description = "Sets the maximum forward speed. Use 18 for normal racing; minimum is clamped to 0.") public void MaximumSpeed(float v) { maxSpeed = Math.max(0, v); }
+    @SimpleProperty(description = "Gets the steering speed. Default is 4; the minimum useful value is 0.") public float TurningSpeed() { return turnSpeed; } @SimpleProperty(description = "Sets left/right steering speed. Use 4 to 6 for normal racing; minimum is clamped to 0.") public void TurningSpeed(float v) { turnSpeed = Math.max(0, v); }
+    @SimpleProperty(description = "Gets the main car image rotation in degrees.") public float CarDirection() { return carDirection; } @SimpleProperty(description = "Sets the main car image rotation in degrees. 0 faces up, 90 right, 180 down, and 270 left.") public void CarDirection(float v) { carDirection = normalizeDegrees(v); angle = carDirection; view.invalidate(); }
+    @SimpleProperty(description = "Gets the default opponent car image rotation in degrees.") public float OpponentDirection() { return opponentDirection; } @SimpleProperty(description = "Sets the default opponent car image rotation in degrees before automatic above/below lane flipping.") public void OpponentDirection(float v) { opponentDirection = normalizeDegrees(v); view.invalidate(); }
     @SimpleProperty public float CarWidth() { return carWidth; } @SimpleProperty public void CarWidth(float v) { carWidth = v; }
     @SimpleProperty public float CarHeight() { return carHeight; } @SimpleProperty public void CarHeight(float v) { carHeight = v; }
     @SimpleProperty public String CarName() { return carName; } @SimpleProperty public void CarName(String v) { carName = v; currentPlayerId = cleanPlayer(v); }
@@ -285,26 +289,39 @@ public class EasyRacerEngine extends AndroidViewComponent {
                     else { a.y += 3.5f; b.y -= 3.5f; }
                 }
                 if (Math.abs(a.x - b.x) < (a.w + b.w) / 2f) {
-                    b.laneX = findOpenLaneX(b.w, b.y, b);
+                    b.laneX = findOpenLaneX(b.w, b.y, b, b.vy);
                 }
             }
         }
     }
-    private float findOpenLaneX(float objectWidth, float y, GameObject ignore) {
+    private float findOpenLaneX(float objectWidth, float y, GameObject ignore) { return findOpenLaneX(objectWidth, y, ignore, 0f); }
+    private float findOpenLaneX(float objectWidth, float y, GameObject ignore, float desiredVy) {
         int lanes = Math.max(1, roadLanes);
         float left = mainRoadLeft();
         float laneWidth = Math.max(objectWidth + 24f, (mainRoadRight() - left) / lanes);
-        float best = randomRoadX(objectWidth);
-        for (int lane = 0; lane < lanes; lane++) {
-            float candidate = left + laneWidth * lane + laneWidth / 2f;
-            boolean blocked = false;
-            for (GameObject other : opponents) if (other != ignore && Math.abs(other.x - candidate) < objectWidth && Math.abs(other.y - y) < (other.h + objectWidth)) { blocked = true; break; }
-            if (!blocked) return candidate;
+        float preferred = ignore != null && ignore.laneX > 0 ? nearestLaneCenter(ignore.laneX, objectWidth) : nearestLaneCenter(randomRoadX(objectWidth), objectWidth);
+        float best = preferred;
+        for (int pass = 0; pass < 2; pass++) {
+            for (int lane = 0; lane < lanes; lane++) {
+                float candidate = pass == 0 ? preferred : left + laneWidth * lane + laneWidth / 2f;
+                boolean blocked = false;
+                for (GameObject other : opponents) {
+                    if (other == ignore || Math.abs(other.laneX - candidate) >= objectWidth) continue;
+                    boolean closeY = Math.abs(other.y - y) < (other.h + objectWidth);
+                    boolean oppositeDirectionInLane = desiredVy != 0f && other.vy != 0f && Math.signum(other.vy) != Math.signum(desiredVy);
+                    if (closeY || oppositeDirectionInLane) { blocked = true; break; }
+                }
+                if (!blocked) return candidate;
+            }
         }
         return best;
     }
-    private void moveSideways(int dir) { float effectiveGrip = Math.max(0.1f, grip * roadGrip); angle = 0; carX += dir * steeringMoveDistance(effectiveGrip); if (effectiveGrip < 0.35f) carX += dir * Math.abs(speed) * 0.6f; }
-    private float steeringMoveDistance(float effectiveGrip) { return Math.max(7f, Math.abs(speed) * 1.35f) * effectiveGrip; }
+    private float alignOpponentVyForLane(float laneX, float desiredVy) {
+        for (GameObject other : opponents) if (Math.abs(other.laneX - laneX) < Math.max(1f, other.w) && other.vy != 0f && Math.signum(other.vy) != Math.signum(desiredVy)) return Math.copySign(Math.abs(desiredVy), other.vy);
+        return desiredVy;
+    }
+    private void moveSideways(int dir) { float effectiveGrip = Math.max(0.1f, grip * roadGrip); angle = carDirection; carX += dir * steeringMoveDistance(effectiveGrip); if (effectiveGrip < 0.35f) carX += dir * Math.abs(speed) * 0.6f; }
+    private float steeringMoveDistance(float effectiveGrip) { return Math.max(turnSpeed, Math.abs(speed) * 1.35f) * effectiveGrip; }
     private void checkCollisions() {
         RectF car = rect(carX, carY, carWidth, carHeight);
         float left = mainRoadLeft(); float right = mainRoadRight();
@@ -325,6 +342,7 @@ public class EasyRacerEngine extends AndroidViewComponent {
     }
     private RectF rect(float x, float y, float w, float h) { return new RectF(x - w/2, y - h/2, x + w/2, y + h/2); }
     private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
+    private float normalizeDegrees(float degrees) { float normalized = degrees % 360f; return normalized < 0 ? normalized + 360f : normalized; }
     private void applyRoadType() { String t = roadType == null ? "" : roadType.toLowerCase(); if (t.contains("ice") || t.contains("snow")) { roadGrip = Math.min(roadGrip, 0.35f); friction = 0.015f; } else if (t.contains("dirt") || t.contains("desert") || t.contains("sand")) { roadGrip = Math.min(roadGrip, 0.6f); friction = 0.07f; } else if (roadGrip <= 0) { roadGrip = 1f; friction = 0.04f; } }
     private void applyRoadPreset(String type) { String t = type == null ? "" : type.toLowerCase(); roadLanes = t.contains("track") ? 2 : t.contains("highway") ? 4 : 3; roadSurface = t.contains("desert") || t.contains("beach") ? "Sand" : t.contains("dirt") || t.contains("forest") || t.contains("mountain") ? "Dirt" : t.contains("snow") ? "Ice" : "Asphalt"; roadMarking = t.contains("track") ? "Solid" : "Dashed"; roadSideStyle = type; roadDifficulty = t.contains("snow") || t.contains("mountain") ? "Hard" : "Normal"; roadGrip = t.contains("snow") ? 0.25f : t.contains("dirt") || t.contains("desert") ? 0.55f : 1f; friction = t.contains("snow") ? 0.015f : t.contains("dirt") || t.contains("desert") ? 0.07f : 0.04f; roadSpeed = t.contains("highway") ? 9f : t.contains("track") ? 7f : 6f; }
     private void setLandscapeMode(boolean enabled) { try { Activity a = (Activity) container.$context(); a.setRequestedOrientation(enabled ? ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED); } catch (Exception ignored) { } }
@@ -347,11 +365,13 @@ public class EasyRacerEngine extends AndroidViewComponent {
         boolean viewReady = view.getWidth() > 0 && view.getHeight() > 0;
         float spawnX = x > 0 && viewReady ? x : randomRoadX(safeWidth);
         float spawnY = y > 0 && viewReady ? y : Math.max(safeHeight / 2f + 12f, viewReady ? view.getHeight() * 0.25f : safeHeight / 2f + 12f);
-        spawnX = findOpenLaneX(safeWidth, spawnY, null);
+        float desiredVy = (fromAbove ? 1f : -1f) * Math.max(2.5f, roadSpeed * 1.15f);
+        spawnX = findOpenLaneX(safeWidth, spawnY, null, desiredVy);
+        desiredVy = alignOpponentVyForLane(spawnX, desiredVy);
         GameObject opponent = new GameObject(spawnX, spawnY, safeWidth, safeHeight, "opponent", key);
         opponent.needsLayoutPosition = !viewReady;
         opponent.imagePath = cleanedPath.length() > 0 ? cleanedPath : opponentImagePaths.containsKey(key) ? opponentImagePaths.get(key) : opponentImagePath;
-        opponent.vy = (fromAbove ? 1f : -1f) * Math.max(2.5f, roadSpeed * 1.15f);
+        opponent.vy = desiredVy;
         opponent.laneX = nearestLaneCenter(spawnX, safeWidth);
         opponents.add(opponent);
         view.invalidate();
@@ -362,7 +382,9 @@ public class EasyRacerEngine extends AndroidViewComponent {
             opponent.x = randomRoadX(opponent.w);
             opponent.y = Math.max(opponent.h / 2f + 12f, view.getHeight() * 0.25f);
             opponent.vy = Math.max(2.5f, roadSpeed * 1.15f);
-            opponent.laneX = nearestLaneCenter(opponent.x, opponent.w);
+            opponent.laneX = findOpenLaneX(opponent.w, opponent.y, opponent, opponent.vy);
+            opponent.vy = alignOpponentVyForLane(opponent.laneX, opponent.vy);
+            opponent.x = opponent.laneX;
             opponent.needsLayoutPosition = false;
         }
     }
@@ -392,9 +414,10 @@ public class EasyRacerEngine extends AndroidViewComponent {
     }
     private void respawnOpponent(GameObject o, boolean fromAbove) {
         o.y = fromAbove ? randomSpawnY(o.h) : randomSpawnBottomY(o.h);
-        o.laneX = findOpenLaneX(o.w, o.y, o);
+        float desiredVy = (fromAbove ? 1f : -1f) * Math.max(2.5f, roadSpeed * 1.15f);
+        o.laneX = findOpenLaneX(o.w, o.y, o, desiredVy);
         o.x = o.laneX;
-        o.vy = (fromAbove ? 1f : -1f) * Math.max(2.5f, roadSpeed * 1.15f);
+        o.vy = alignOpponentVyForLane(o.laneX, desiredVy);
     }
     private float nearestLaneCenter(float x, float objectWidth) {
         int lanes = Math.max(1, roadLanes);
@@ -473,7 +496,8 @@ public class EasyRacerEngine extends AndroidViewComponent {
         private int roadColor() { String t = roadSurface == null ? "" : roadSurface.toLowerCase(); if (t.contains("sand")) return Color.rgb(166, 128, 72); if (t.contains("ice")) return Color.rgb(134, 174, 190); if (t.contains("dirt")) return Color.rgb(92, 66, 45); return Color.rgb(54, 57, 62); }
         private int sideColor() { String t = roadSideStyle == null ? "" : roadSideStyle.toLowerCase(); if (t.contains("desert") || t.contains("beach")) return Color.rgb(190, 152, 88); if (t.contains("snow")) return Color.rgb(210, 225, 230); if (t.contains("forest") || t.contains("mountain")) return Color.rgb(27, 75, 42); if (t.contains("cyber")) return Color.rgb(34, 20, 55); return Color.rgb(31, 78, 56); }
         private void drawVehicle(Canvas c) { Bitmap b = bikeMode ? bikeBitmap : carBitmap; if (b == null) { b = bikeMode ? load(bikeImagePath) : load(carImagePath); if (bikeMode) bikeBitmap = b; else carBitmap = b; } RectF dst = vehicleDrawRect(rect(carX, carY, carWidth, carHeight), b); c.save(); c.rotate(angle, carX, carY); if (b != null) c.drawBitmap(b, null, dst, p); else { p.setColor(Color.argb(120,0,0,0)); c.drawOval(new RectF(dst.left+8,dst.bottom-18,dst.right-8,dst.bottom+10),p); p.setColor(bikeMode ? Color.CYAN : Color.rgb(22, 190, 96)); c.drawRoundRect(dst, 18, 18, p); p.setColor(Color.rgb(160, 230, 255)); c.drawRoundRect(new RectF(dst.left+18,dst.top+24,dst.right-18,dst.top+62),10,10,p); p.setColor(Color.BLACK); c.drawRect(dst.left-8,dst.top+28,dst.left+8,dst.top+58,p); c.drawRect(dst.right-8,dst.top+28,dst.right+8,dst.top+58,p); c.drawRect(dst.left-8,dst.bottom-58,dst.left+8,dst.bottom-28,p); c.drawRect(dst.right-8,dst.bottom-58,dst.right+8,dst.bottom-28,p); } drawVehicleOutline(c, dst); c.restore(); }
-        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); boolean isOpponent = o.type != null && o.type.toLowerCase().contains("opponent"); Bitmap drawBitmap = isOpponent ? resolveOpponentBitmap(o, b) : resolveObjectBitmap(o, b); if (drawBitmap != null) { r = vehicleDrawRect(r, drawBitmap); p.setStyle(Paint.Style.FILL); p.setAlpha(255); if (isOpponent && o.vy > 0) { c.save(); c.scale(1f, -1f, r.centerX(), r.centerY()); c.drawBitmap(drawBitmap, null, r, p); c.restore(); } else c.drawBitmap(drawBitmap, null, r, p); p.setAlpha(255); if (isOpponent) drawOpponentOutline(c, r); } else if (isOpponent) { if (o.vy > 0) { c.save(); c.scale(1f, -1f, r.centerX(), r.centerY()); drawOpponentFallback(c, r); c.restore(); } else drawOpponentFallback(c, r); } else drawFallbackObject(c, o, r, color); } }
+        private void drawList(Canvas c, ArrayList<GameObject> list, Bitmap b, int color) { for (GameObject o : list) { RectF r = o.rect(); boolean isOpponent = o.type != null && o.type.toLowerCase().contains("opponent"); Bitmap drawBitmap = isOpponent ? resolveOpponentBitmap(o, b) : resolveObjectBitmap(o, b); if (drawBitmap != null) { r = vehicleDrawRect(r, drawBitmap); p.setStyle(Paint.Style.FILL); p.setAlpha(255); if (isOpponent) { c.save(); c.rotate(opponentDrawDirection(o), r.centerX(), r.centerY()); c.drawBitmap(drawBitmap, null, r, p); c.restore(); } else c.drawBitmap(drawBitmap, null, r, p); p.setAlpha(255); if (isOpponent) drawOpponentOutline(c, r); } else if (isOpponent) { c.save(); c.rotate(opponentDrawDirection(o), r.centerX(), r.centerY()); drawOpponentFallback(c, r); c.restore(); } else drawFallbackObject(c, o, r, color); } }
+        private float opponentDrawDirection(GameObject o) { return normalizeDegrees(opponentDirection + (o.vy > 0 ? 180f : 0f)); }
         private Bitmap resolveObjectBitmap(GameObject o, Bitmap defaultBitmap) { String t = o.type == null ? "" : o.type.toLowerCase(); if (t.contains("coin")) { if (coinBitmap == null) coinBitmap = load("coin.png"); return coinBitmap; } if (t.contains("cone")) { if (coneBitmap == null) coneBitmap = load("cone.png"); return coneBitmap; } if (isRoadblockType(t)) { if (roadblockBitmap == null) roadblockBitmap = load("roadblock.png"); return roadblockBitmap; } return defaultBitmap; }
         private Bitmap resolveOpponentBitmap(GameObject o, Bitmap defaultBitmap) { String key = cleanOpponentName(o.name); Bitmap drawBitmap = opponentImages.get(key); if (drawBitmap == null && o.imagePath != null && o.imagePath.length() > 0) { drawBitmap = load(o.imagePath); if (drawBitmap != null) opponentImages.put(key, drawBitmap); } if (drawBitmap == null && opponentImagePaths.containsKey(key)) { drawBitmap = load(opponentImagePaths.get(key)); if (drawBitmap != null) opponentImages.put(key, drawBitmap); } if (drawBitmap == null) drawBitmap = defaultBitmap; if (drawBitmap == null && opponentImagePath.length() > 0) { drawBitmap = load(opponentImagePath); if (drawBitmap != null) { opponentBitmap = drawBitmap; opponentImages.put(cleanOpponentName("Opponent"), drawBitmap); } } return drawBitmap; }
         private RectF vehicleDrawRect(RectF box, Bitmap bitmap) { if (bitmap == null || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) return box; float aspect = (float)bitmap.getWidth() / (float)bitmap.getHeight(); float w = box.width(); float h = box.height(); if (w / h > aspect) w = h * aspect; else h = w / aspect; return new RectF(box.centerX() - w / 2f, box.centerY() - h / 2f, box.centerX() + w / 2f, box.centerY() + h / 2f); }

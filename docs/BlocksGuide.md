@@ -163,7 +163,7 @@ In `Screen1.Initialize`, use one preset road or one custom road, then create the
 
 1. Easy preset: `CreateRoadTypeBlock("Highway")`.
 2. Custom preset: `ConfigureRoadBlock("Highway", 4, "Asphalt", "Dashed", "City", 1.0, 0.04, 8, 720, "Normal")`.
-3. Set optional racing rules: `MaximumSpeed` to `18`, `TurningSpeed` to `6`, `MaximumLap` to `3`, `EnableFuel(true)`, and `EnableNitro(true)`.
+3. Set optional racing rules: `MaximumSpeed` to `18` (minimum `0`), `TurningSpeed` to `6` (minimum `0`), `CarDirection` to `0`, `OpponentDirection` to `180`, `MaximumLap` to `3`, `EnableFuel(true)`, and `EnableNitro(true)`.
 4. Call `CreateCar()`.
 
 ### Step 4: Add opponent cars
@@ -175,7 +175,7 @@ Choose one of these approaches:
 3. Different opponent types: call `SetOpponentVehicle("Truck", "truck.png")`, then `SpawnRandomOpponent("Truck")` or `CreateOpponentVehicleWithSize("Truck", "truck.png", 520, -160, 150, 230)`.
 4. Numbered opponent images: call `SetOpponentImageByNumber(1, "truck.png")`, `SetOpponentImageByNumber(2, "taxi.png")`, and so on. The number starts at 1 and matches the order created by `AddOpponents`, so each opponent can have its own image.
 
-Opponents avoid overlapping each other while they drive. Opponent-to-opponent contact is separated automatically and never triggers game-over or crash events. Opponents are damaging only when they overlap the main car: the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns that opponent.
+Opponents avoid overlapping each other while they drive. Each opponent prefers to stay in one lane and only seldom transitions to another lane when that lane is blocked. The traffic lane planner also prevents a lane from mixing cars coming from above with cars coming from below. Opponent-to-opponent contact is separated automatically and never triggers game-over or crash events. Opponents are damaging only when they overlap the main car: the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns that opponent.
 
 ### Step 5: Add coins
 
@@ -255,8 +255,10 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | --- | --- | --- |
 | `Accelerate()` | None. | Increases forward speed unless fuel is enabled and empty. |
 | `Brake()` | None. | Reduces speed and can reverse slowly at low speed. |
-| `TurnLeft()` / `MoveLeft()` | None. | Moves the vehicle left on the x-axis while keeping it facing forward. |
-| `TurnRight()` / `MoveRight()` | None. | Moves the vehicle right on the x-axis while keeping it facing forward. |
+| `TurnLeft()` / `MoveLeft()` | None. | Moves the vehicle left inside the lane area using `TurningSpeed`; use `SetCarDirection` or `CarDirection` to rotate the main car image. |
+| `TurnRight()` / `MoveRight()` | None. | Moves the vehicle right inside the lane area using `TurningSpeed`; use `SetCarDirection` or `CarDirection` to rotate the main car image. |
+| `SetCarDirection(degrees)` | `degrees`: rotation angle. | Rotates the main car image. Use `0` for up, `90` for right, `180` for down, and `270` for left. |
+| `SetOpponentDirection(degrees)` | `degrees`: base rotation angle. | Rotates opponent car images before automatic above/below lane flipping. Use `180` as the default for cars that normally face down the screen. |
 | `UseNitro()` | None. | Spends nitro for a temporary speed boost when nitro is enabled and available. |
 | `EnableAccelerometerNavigation(enabled, sensitivity, deadZone)` | `enabled`: true/false; `sensitivity`: steering multiplier; `deadZone`: ignored tilt amount. | Enables tilt steering. Start with `true`, `1.2`, and `0.8`. |
 | `NavigateWithAccelerometer(xAccel, yAccel, zAccel)` | `xAccel`, `yAccel`, `zAccel`: values from `AccelerometerSensor.AccelerationChanged`. | Converts accelerometer readings into left/right steering plus acceleration/braking. |
@@ -294,7 +296,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | Block | Parameters | What it does |
 | --- | --- | --- |
 | `CreateOpponent(x, y)` | `x`: horizontal center position; `y`: vertical center position. | Spawns an AI opponent car at the given screen position and redraws immediately. |
-| `AddOpponents(count)` | `count`: number of default opponent cars to add. | Adds many opponents at once, spread across lanes, alternating cars coming from above and below. Cars coming from above are drawn vertically flipped. |
+| `AddOpponents(count)` | `count`: number of default opponent cars to add. | Adds many opponents at once, spread across lanes, alternating cars coming from above and below. A lane is reserved for one travel direction at a time, so a car coming from above will not share that lane with a car coming from below. |
 | `AddOpponentVehicles(name, imagePath, count)` | `name`: opponent vehicle name; `imagePath`: optional uploaded filename/path; `count`: number to add. | Adds many named opponent cars or bikes at once with the same alternating two-direction traffic behavior. |
 | `CreateOpponentVehicle(name, imagePath, x, y)` | `name`: opponent vehicle name; `imagePath`: optional uploaded filename/path; `x`, `y`: center position. | Spawns a named opponent car or bike with its own image, allowing multiple opponent vehicles on the road. |
 | `CreateOpponentVehicleWithSize(name, imagePath, x, y, width, height)` | Same as above plus custom width and height. | Spawns the whole named opponent vehicle at the requested size. |
@@ -350,8 +352,10 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `CarSpeed` | Number. | Gets or sets the current speed. |
 | `Acceleration` | Number. | Controls how quickly `Accelerate()` increases speed. |
 | `BrakeStrength` | Number. | Controls how strongly `Brake()` reduces speed. |
-| `MaximumSpeed` | Number. | Sets the maximum forward speed. |
-| `TurningSpeed` | Number. | Sets left/right steering strength. |
+| `MaximumSpeed` | Number. | Sets the maximum forward speed. Default is `18`; minimum is `0`. |
+| `TurningSpeed` | Number. | Sets left/right steering strength. Default is `4`; common values are `4` to `6`; minimum is `0`. |
+| `CarDirection` | Number. | Gets or sets the main car image rotation in degrees (`0`, `90`, `180`, or `270` are common). |
+| `OpponentDirection` | Number. | Gets or sets the base opponent image rotation in degrees before automatic above/below lane flipping. |
 | `CarWidth` / `CarHeight` | Number. | Gets or sets vehicle size in pixels. |
 | `CarName` | Text. | Sets the display/current player id used for saved scores. |
 | `Weight` | Number. | Heavier values reduce acceleration. |
