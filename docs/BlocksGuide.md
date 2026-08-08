@@ -130,7 +130,7 @@ Do not use the Image component itself as the value. Use the image asset's filena
 
 ## 9. Professional visual tips
 
-- Use a transparent PNG car image for best results.
+- Use a transparent PNG car image for best results. The engine preserves each car image aspect ratio inside its vehicle box so wide or tall images are not stretched into a warped shape.
 - Use road width around `700` to `900` pixels in landscape layouts.
 - Use `Highway` for fast endless games and `Track` for lap-based racing.
 - Keep obstacle sizes larger than `40x40` pixels so touch-screen players can recognize them quickly.
@@ -173,8 +173,9 @@ Choose one of these approaches:
 1. Simple traffic: call `AddOpponents(3)` after `SetOpponentImage`. The engine spreads cars across lanes and moves them automatically.
 2. One exact opponent: call `CreateOpponent(420, 120)` to place an opponent at a chosen screen position.
 3. Different opponent types: call `SetOpponentVehicle("Truck", "truck.png")`, then `SpawnRandomOpponent("Truck")` or `CreateOpponentVehicleWithSize("Truck", "truck.png", 520, -160, 150, 230)`.
+4. Numbered opponent images: call `SetOpponentImageByNumber(1, "truck.png")`, `SetOpponentImageByNumber(2, "taxi.png")`, and so on. The number starts at 1 and matches the order created by `AddOpponents`, so each opponent can have its own image.
 
-Opponents are damaging by default. When the main car overlaps an opponent, the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns the opponent.
+Opponents avoid overlapping each other while they drive. Opponent-to-opponent contact is separated automatically and never triggers game-over or crash events. Opponents are damaging only when they overlap the main car: the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns that opponent.
 
 ### Step 5: Add coins
 
@@ -199,7 +200,7 @@ Recommended examples:
 ### Step 7: Start, steer, and restart the race
 
 1. Start with the built-in on-screen Start button, or call `StartRace()` from your own Start button.
-2. The built-in left/right buttons steer the main car. You can also call `TurnLeft()` and `TurnRight()` from your own controls.
+2. The built-in left/right buttons steer the main car only while the race is actively playing. You can also call `TurnLeft()` and `TurnRight()` from your own controls; those movement blocks are ignored while the race is stopped or paused.
 3. If you use an `AccelerometerSensor`, call `EnableAccelerometerNavigation(true, 1.2, 0.8)` once, then call `NavigateWithAccelerometer(xAccel, yAccel, zAccel)` inside the sensor's `AccelerationChanged` event.
 4. For a one-hit game over, call `EnableGameOverOnCrash(true)` before `StartRace()`.
 5. For restart, call `StopRace()`, `ResetScore()`, `ResetCar()`, add fresh opponents/coins/obstacles, then call `StartRace()`.
@@ -277,6 +278,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SetBikeImage(path)` | `path`: image location text. | Sets the player bike image used by `CreateBike()`. |
 | `SetOpponentImage(path)` | `path`: image location text, for example `opponent.png`. | Sets the default opponent image and redraws the game immediately. |
 | `SetOpponentVehicle(name, imagePath)` / `SetOpponentVehicleImage(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename or path. | Registers a named opponent car or bike image that can be reused for multiple opponents. |
+| `SetOpponentImageByNumber(opponentNumber, imagePath)` | `opponentNumber`: 1-based opponent number; `imagePath`: uploaded filename or path. | Assigns a unique image to a specific numbered opponent created by `AddOpponents`; existing opponents update immediately. |
 | `SetOpponentCarImage(path)` / `OpponentCarImage` property | `path`: image location text. | Sets the default opponent car image; use this when your project has the `opponentCarImage` property block. |
 | `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. The engine also tries bundled `coin.png`/`images/coin.png` before drawing a built-in coin fallback. |
 | `SetConeImage(path)` | `path`: image location text, for example `cone.png`. | Sets the image used when `CreateObstacle` type contains `cone`; otherwise a built-in cone fallback is drawn. |
