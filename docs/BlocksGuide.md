@@ -185,7 +185,7 @@ Choose one of these approaches:
 1. Simple traffic: call `AddOpponents(3)` after `SetOpponentImage`. The engine spreads cars across lanes and moves them automatically.
 2. One exact opponent: call `CreateOpponent(420, 120)` to place an opponent at a chosen screen position.
 3. Different opponent types: call `SetOpponentVehicle("Truck", "truck.png")`, then `SpawnRandomOpponent("Truck")` or `CreateOpponentVehicleWithSize("Truck", "truck.png", 520, -160, 150, 230)`.
-4. Numbered opponent images: call `SetOpponentImageByNumber(1, "truck.png")`, `SetOpponentImageByNumber(2, "taxi.png")`, and so on. The number starts at 1 and matches the order created by `AddOpponents`, so each opponent can have its own image.
+4. Numbered opponent images: call `SetOpponentImageByNumber(1, "truck.png", "Up")`, `SetOpponentImageByNumber(2, "taxi.png", "Down")`, and so on. The number starts at 1 and matches the order created by `AddOpponents`, so each opponent can have its own image and original facing direction.
 
 Opponents avoid overlapping each other while they drive. Each opponent prefers to stay in one lane and only seldom transitions to another lane when that lane is blocked. Every few respawns, one opponent is forced into the player's current lane as a head-on challenge, while nearby left and right escape lanes are cleared so the player still has a fair way out. The traffic lane planner also prevents a lane from mixing cars coming from above with cars coming from below when it is not creating that deliberate head-on challenge. Opponent-to-opponent contact is separated automatically and never triggers game-over or crash events. Opponents are damaging only when they overlap the main car: the extension calls `WhenCarCrash`, `CarCrash`, applies damage, and respawns that opponent.
 
@@ -292,7 +292,7 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `SetBikeImage(path)` | `path`: image location text. | Sets the player bike image used by `CreateBike()`. |
 | `SetOpponentImage(path)` | `path`: image location text, for example `opponent.png`. | Sets the default opponent image and redraws the game immediately. |
 | `SetOpponentVehicle(name, imagePath)` / `SetOpponentVehicleImage(name, imagePath)` | `name`: opponent vehicle name; `imagePath`: uploaded filename or path. | Registers a named opponent car or bike image that can be reused for multiple opponents. |
-| `SetOpponentImageByNumber(opponentNumber, imagePath)` | `opponentNumber`: 1-based opponent number; `imagePath`: uploaded filename or path. | Assigns a unique image to a specific numbered opponent created by `AddOpponents`; existing opponents update immediately. |
+| `SetOpponentImageByNumber(opponentNumber, imagePath, originalDirection)` | `opponentNumber`: 1-based opponent number; `imagePath`: uploaded filename or path; `originalDirection`: `Up`, `Down`, `Left`, `Right`, or degrees. | Assigns a unique image and original facing direction to a specific numbered opponent created by `AddOpponents`; existing opponents update immediately. |
 | `SetOpponentCarImage(path)` / `OpponentCarImage` property | `path`: image location text. | Sets the default opponent car image; use this when your project has the `opponentCarImage` property block. |
 | `SetCoinImage(path)` | `path`: image location text, for example `coin.png`. | Sets the coin image used by `SpawnCoin`. The engine also tries bundled `coin.png`/`images/coin.png` before drawing a built-in coin fallback. |
 | `SetConeImage(path)` | `path`: image location text, for example `cone.png`. | Sets the image used when `CreateObstacle` type contains `cone`; otherwise a built-in cone fallback is drawn. |
@@ -327,7 +327,9 @@ This section lists each visible EasyRacer block, what it does, and the parameter
 | `RetrieveScore(playerId)` | `playerId`: player name/id text. | Returns that player's saved best score. |
 | `RetrieveHighScore()` | None. | Returns the highest score saved on the device. |
 | `OpenScoreSidebar()` | None. | Opens the professional score dashboard sidebar. |
-| `CloseScoreSidebar()` | None. | Closes the score dashboard sidebar. |
+| `CloseScoreSidebar()` | None. | Closes the score dashboard sidebar. The built-in close icon is drawn without a circular button background. |
+| `ShowProfessionalNotifier(title, message, type, durationMs)` | `title`: heading text; `message`: body text; `type`: `Info`, `Success`, `Warning`, or `Error`; `durationMs`: milliseconds to show, or `0` until dismissed. | Shows a polished in-game notification banner instead of using the built-in MIT App Inventor Notifier component. |
+| `DismissProfessionalNotifier()` | None. | Hides the current professional notifier banner. |
 | `GetScore()` | None. | Returns the current score. |
 | `ResetScore()` | None. | Clears current score and coins and restarts the race timer. |
 | `Save()` | None. | Saves coins, score, car name, theme, and road type to local storage. |
